@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - redis
+      - memcached
+    environment:
+      - HOTDEAL_ENVIONMENT=production
+      - REDIS_ADDR=redis:6379
+      - REDIS_DB=0
+      - REDIS_CHANNEL=hotdeals
+      - MEMCACHE_ADDR=memcached:11211
+      - CRAWL_INTERVAL_SECONDS=60
+    volumes:
+      - ./error:/app/error
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  memcached:
+    image: memcached:alpine
+    restart: always
+    ports:
+      - "11211:11211"
+
+volumes:
+  redis-data:
