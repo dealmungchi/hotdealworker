@@ -74,11 +74,13 @@ Redis에 publish 하는 메시지는 다음과 같은 구조의 JSON 배열을 B
 ```json
 [
   {
+    "id": "1",
     "title": "상품명",
-    "link": "상품 링크",
+    "link": "상품 링크", 
     "price": "가격",
     "thumbnail": "썸네일 이미지 URL",
-    "posted_at": "게시 일시"
+    "posted_at": "게시 일시",
+    "provider": "provider"
   },
   ...
 ]
