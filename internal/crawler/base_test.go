@@ -75,13 +75,13 @@ func TestBaseCrawler(t *testing.T) {
 
 	dealSelections := doc.Find("div.deal")
 
-	deals := crawler.processDeals(dealSelections, func(s *goquery.Selection) *HotDeal {
+	deals := crawler.processDeals(dealSelections, func(s *goquery.Selection) (*HotDeal, error) {
 		title := s.Find("div.title").Text()
 		price := s.Find("div.price").Text()
 		return &HotDeal{
 			Title: title,
 			Price: price,
-		}
+		}, nil
 	})
 
 	// Sort the deals by title to ensure consistent order for testing

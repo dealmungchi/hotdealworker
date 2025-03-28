@@ -1,12 +1,15 @@
 package crawler
 
 import (
+	"errors"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // PpomEnCrawler crawls hot deals from Ppomppu English forum
@@ -48,22 +51,27 @@ func (c *PpomEnCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *PpomEnCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *PpomEnCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	if s.Find("td.baseList-numb img[alt='해외포럼 아이콘']").Length() > 0 {
-		return nil
+		return nil, nil
 	}
 
 	titleSelection := s.Find("a.baseList-title")
 	title := strings.TrimSpace(titleSelection.Text())
 	if title == "" {
-		return nil
+		return nil, errors.New("title not found")
 	}
 
 	link, exists := titleSelection.Attr("href")
 	if !exists {
-		return nil
+		return nil, errors.New("link not found")
 	}
-	
+
+	id, err := helpers.GetSplitPart(link, "no=", 1)
+	if err != nil {
+		return nil, err
+	}
+
 	base, err := url.Parse(c.URL)
 	if err == nil {
 		if ref, err := url.Parse(link); err == nil {
@@ -96,10 +104,12 @@ func (c *PpomEnCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt := strings.TrimSpace(s.Find("td.baseList-space time.baseList-time").Text())
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumbnail,
 		PostedAt:  postedAt,
-	}
+		Provider:  "PpomppuEn",
+	}, nil
 }

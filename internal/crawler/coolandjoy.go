@@ -1,11 +1,14 @@
 package crawler
 
 import (
+	"errors"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // CoolandjoyCrawler crawls hot deals from Coolandjoy
@@ -47,16 +50,22 @@ func (c *CoolandjoyCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *CoolandjoyCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *CoolandjoyCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	subjectSel := s.Find("a.na-subject")
 	title := strings.TrimSpace(subjectSel.Text())
 	link, exists := subjectSel.Attr("href")
 	if !exists || title == "" {
-		return nil
+		return nil, errors.New("title or link not found")
 	}
-	
+
 	if strings.HasPrefix(link, "/") {
 		link = "https://coolenjoy.net" + link
+	}
+
+	// Extract ID from the link
+	id, err := helpers.GetSplitPart(link, "/", 5)
+	if err != nil {
+		return nil, err
 	}
 
 	price := strings.TrimSpace(s.Find("div.float-right font").Text())
@@ -73,10 +82,12 @@ func (c *CoolandjoyCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt := strings.TrimSpace(postedAtSel.Text())
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumbnail,
 		PostedAt:  postedAt,
-	}
+		Provider:  "Coolandjoy",
+	}, nil
 }

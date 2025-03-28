@@ -1,11 +1,14 @@
 package crawler
 
 import (
+	"errors"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // ArcaCrawler crawls hot deals from Arca Live
@@ -47,21 +50,27 @@ func (c *ArcaCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *ArcaCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *ArcaCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	titleSel := s.Find("div.vrow-inner div.vrow-top.deal a.title.hybrid-title")
 	titleSel.Find("span").Remove()
 	title := strings.TrimSpace(titleSel.Text())
 	link, exists := titleSel.Attr("href")
 	if !exists || title == "" {
-		return nil
+		return nil, errors.New("title or link not found")
 	}
-	
+
 	if strings.HasPrefix(link, "/") {
 		link = "https://arca.live" + link
 	}
-	
+
+	// Extract ID from the link
+	id, err := helpers.GetSplitPart(strings.Split(link, "?")[0], "/", 5)
+	if err != nil {
+		return nil, err
+	}
+
 	price := strings.TrimSpace(s.Find("a.title.hybrid-bottom div.vrow-bottom.deal span.deal-price").Text())
-	
+
 	thumb, _ := s.Find("a.title.preview-image div.vrow-preview img").Attr("src")
 	if thumb != "" && strings.HasPrefix(thumb, "//") {
 		thumb = "https:" + thumb
@@ -70,10 +79,12 @@ func (c *ArcaCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt, _ := s.Find("span.col-time time").Attr("datetime")
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumb,
 		PostedAt:  postedAt,
-	}
+		Provider:  "Arca",
+	}, nil
 }

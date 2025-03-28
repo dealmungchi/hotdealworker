@@ -1,11 +1,14 @@
 package crawler
 
 import (
+	"errors"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // DamoangCrawler crawls hot deals from Damoang
@@ -47,16 +50,21 @@ func (c *DamoangCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *DamoangCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *DamoangCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	a := s.Find("a.da-link-block.da-article-link.subject-ellipsis")
 	title := strings.TrimSpace(a.Text())
 	link, exists := a.Attr("href")
 	if !exists || title == "" {
-		return nil
+		return nil, errors.New("title or link not found")
 	}
-	
+
 	if strings.HasPrefix(link, "/") {
 		link = "https://damoang.net" + link
+	}
+
+	id, err := helpers.GetSplitPart(link, "/", 4)
+	if err != nil {
+		return nil, err
 	}
 
 	postedAt := s.Find("span.orangered.da-list-date").Text()
@@ -70,10 +78,12 @@ func (c *DamoangCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	}
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     "",
 		Thumbnail: "",
 		PostedAt:  postedAt,
-	}
+		Provider:  "Damoang",
+	}, nil
 }

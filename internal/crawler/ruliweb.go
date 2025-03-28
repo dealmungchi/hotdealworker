@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // RuliwebCrawler crawls hot deals from Ruliweb
@@ -49,7 +51,7 @@ func (c *RuliwebCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *RuliwebCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *RuliwebCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	var title, link, price, thumbnail string
 
 	if subj := s.Find("td.subject a.subject_link"); subj.Length() > 0 {
@@ -62,6 +64,11 @@ func (c *RuliwebCrawler) processDeal(s *goquery.Selection) *HotDeal {
 		if href, exists := subj.Attr("href"); exists {
 			link = resolveURL(c.URL, href)
 		}
+	}
+
+	id, err := helpers.GetSplitPart(strings.Split(link, "?")[0], "/", 7)
+	if err != nil {
+		return nil, err
 	}
 
 	rePrice := regexp.MustCompile(`\\(([\d,]+)\\)$`)
@@ -86,15 +93,17 @@ func (c *RuliwebCrawler) processDeal(s *goquery.Selection) *HotDeal {
 
 	if title != "" && link != "" {
 		return &HotDeal{
+			Id:        id,
 			Title:     title,
 			Link:      link,
 			Price:     price,
 			Thumbnail: thumbnail,
 			PostedAt:  postedAt,
-		}
+			Provider:  "Ruliweb",
+		}, nil
 	}
-	
-	return nil
+
+	return nil, nil
 }
 
 // resolveURL resolves a relative URL against a base URL

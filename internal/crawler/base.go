@@ -7,9 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
 	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // BaseCrawler provides common functionality for all crawlers
@@ -55,7 +56,7 @@ func (c *BaseCrawler) createDocument(reader io.Reader) (*goquery.Document, error
 }
 
 // processDeals processes deals in parallel using goroutines
-func (c *BaseCrawler) processDeals(selections *goquery.Selection, processor func(*goquery.Selection) *HotDeal) []HotDeal {
+func (c *BaseCrawler) processDeals(selections *goquery.Selection, processor func(*goquery.Selection) (*HotDeal, error)) []HotDeal {
 	dealChan := make(chan *HotDeal, selections.Length())
 	var wg sync.WaitGroup
 
@@ -63,9 +64,9 @@ func (c *BaseCrawler) processDeals(selections *goquery.Selection, processor func
 		wg.Add(1)
 		go func(s *goquery.Selection) {
 			defer wg.Done()
-			
+
 			// Process the deal in the goroutine
-			deal := processor(s)
+			deal, _ := processor(s)
 			if deal != nil {
 				dealChan <- deal
 			}

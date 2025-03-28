@@ -1,13 +1,16 @@
 package crawler
 
 import (
+	"errors"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // PpomCrawler crawls hot deals from Ppomppu
@@ -49,15 +52,15 @@ func (c *PpomCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *PpomCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *PpomCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	titleElem := s.Find("div.baseList-cover a.baseList-title")
 	if titleElem.Length() == 0 {
-		return nil
+		return nil, errors.New("title element not found")
 	}
-	
+
 	titleText := strings.TrimSpace(titleElem.Text())
 	if titleText == "" {
-		return nil
+		return nil, errors.New("title is empty")
 	}
 
 	re := regexp.MustCompile(`\\(([^)]+)\\)$`)
@@ -70,9 +73,14 @@ func (c *PpomCrawler) processDeal(s *goquery.Selection) *HotDeal {
 
 	link, exists := titleElem.Attr("href")
 	if !exists || strings.TrimSpace(link) == "" {
-		return nil
+		return nil, errors.New("link not found")
 	}
-	
+
+	id, err := helpers.GetSplitPart(link, "no=", 1)
+	if err != nil {
+		return nil, err
+	}
+
 	base, err := url.Parse(c.URL)
 	if err == nil {
 		if ref, err := url.Parse(link); err == nil {
@@ -98,10 +106,12 @@ func (c *PpomCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt := strings.TrimSpace(s.Find("time.baseList-time").Text())
 
 	return &HotDeal{
+		Id:        id,
 		Title:     titleText,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumbnail,
 		PostedAt:  postedAt,
-	}
+		Provider:  "Ppomppu",
+	}, nil
 }

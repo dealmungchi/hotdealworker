@@ -1,12 +1,15 @@
 package crawler
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // ClienCrawler crawls hot deals from Clien
@@ -48,25 +51,31 @@ func (c *ClienCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *ClienCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *ClienCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	if s.HasClass("blocked") {
-		return nil
+		return nil, errors.New("selection -> class 'blocked' not found")
 	}
 
 	titleAttr, exists := s.Find("span.list_subject").Attr("title")
 	if !exists || strings.TrimSpace(titleAttr) == "" {
-		return nil
+		return nil, errors.New("title not found")
 	}
 	title := strings.TrimSpace(titleAttr)
 
 	link, exists := s.Find("a[data-role='list-title-text']").Attr("href")
 	if !exists || strings.TrimSpace(link) == "" {
-		return nil
+		return nil, errors.New("link not found")
 	}
 	link = strings.TrimSpace(link)
 
 	if strings.HasPrefix(link, "/") {
 		link = "https://www.clien.net" + link
+	}
+
+	// Extract ID from the link
+	id, err := helpers.GetSplitPart(strings.Split(link, "?")[0], "/", 6)
+	if err != nil {
+		return nil, err
 	}
 
 	var price string
@@ -82,10 +91,12 @@ func (c *ClienCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt := strings.TrimSpace(s.Find("div.list_time span.time.popover span.timestamp").Text())
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumbnail,
 		PostedAt:  postedAt,
-	}
+		Provider:  "Clien",
+	}, nil
 }

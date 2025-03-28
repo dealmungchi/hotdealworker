@@ -1,11 +1,14 @@
 package crawler
 
 import (
+	"errors"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // FMKoreaCrawler crawls hot deals from FMKorea
@@ -47,16 +50,21 @@ func (c *FMKoreaCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *FMKoreaCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *FMKoreaCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	a := s.Find("h3.title a")
 	title := strings.TrimSpace(a.Text())
 	link, exists := a.Attr("href")
 	if !exists || title == "" {
-		return nil
+		return nil, errors.New("title or link not found")
 	}
-	
+
 	if strings.HasPrefix(link, "/") {
 		link = "https://www.fmkorea.com" + link
+	}
+
+	id, err := helpers.GetSplitPart(link, "/", 3)
+	if err != nil {
+		return nil, err
 	}
 
 	price := strings.TrimSpace(s.Find(".hotdeal_info span a").Eq(1).Text())
@@ -72,10 +80,12 @@ func (c *FMKoreaCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt := strings.TrimSpace(s.Find("div span.regdate").Text())
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumb,
 		PostedAt:  postedAt,
-	}
+		Provider:  "FMKorea",
+	}, nil
 }

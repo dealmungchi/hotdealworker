@@ -1,11 +1,14 @@
 package crawler
 
 import (
+	"errors"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // QuasarCrawler crawls hot deals from Quasar Zone
@@ -47,16 +50,21 @@ func (c *QuasarCrawler) FetchDeals() ([]HotDeal, error) {
 }
 
 // processDeal processes a single deal
-func (c *QuasarCrawler) processDeal(s *goquery.Selection) *HotDeal {
+func (c *QuasarCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	titleSel := s.Find("div.market-info-list-cont p.tit a.subject-link span.ellipsis-with-reply-cnt")
 	title := strings.TrimSpace(titleSel.Text())
 	link, exists := s.Find("div.market-info-list-cont p.tit a.subject-link").Attr("href")
 	if !exists || title == "" {
-		return nil
+		return nil, errors.New("title or links not found")
 	}
-	
+
 	if strings.HasPrefix(link, "/") {
 		link = "https://quasarzone.com" + link
+	}
+
+	id, err := helpers.GetSplitPart(link, "/", 6)
+	if err != nil {
+		return nil, err
 	}
 
 	price := strings.TrimSpace(s.Find("div.market-info-list-cont div.market-info-sub p").First().Find("span.text-orange").Text())
@@ -69,10 +77,12 @@ func (c *QuasarCrawler) processDeal(s *goquery.Selection) *HotDeal {
 	postedAt := strings.TrimSpace(s.Find("span.date").Text())
 
 	return &HotDeal{
+		Id:        id,
 		Title:     title,
 		Link:      link,
 		Price:     price,
 		Thumbnail: thumb,
 		PostedAt:  postedAt,
-	}
+		Provider:  "Quasar",
+	}, nil
 }
