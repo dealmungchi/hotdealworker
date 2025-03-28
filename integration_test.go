@@ -202,7 +202,7 @@ func TestIntegration(t *testing.T) {
 		t.Skip("Redis is not available, skipping integration test")
 	}
 
-	// Create a test channel name 
+	// Create a test channel name
 	testChannel := "test_hotdeals"
 
 	// Create a subscription to the test channel
@@ -304,32 +304,37 @@ func TestIntegration(t *testing.T) {
 
 	// Use a significantly longer timeout for slower environments or Redis latency
 	messageReceiveTimeout := 30 * time.Second
-	
+
 	// Wait for the message to be received with timeout
 	select {
 	case receivedDeals := <-messages:
 		if !assert.NotNil(t, receivedDeals, "Received deals should not be nil") {
 			t.FailNow()
 		}
-		
+
 		// Assert the expected number of deals
 		if !assert.Len(t, receivedDeals, 2, "Expected 2 deals to be received") {
 			t.FailNow()
 		}
-		
-		// Test the first deal
-		assert.Equal(t, "Test Deal 1", receivedDeals[0].Title, "Incorrect title for first deal")
-		assert.Equal(t, "$10.99", receivedDeals[0].Price, "Incorrect price for first deal")
-		assert.Equal(t, server.URL+"/deal/1", receivedDeals[0].Link, "Incorrect link for first deal")
-		assert.Equal(t, server.URL+"/img/1.jpg", receivedDeals[0].Thumbnail, "Incorrect thumbnail for first deal")
-		assert.Equal(t, "2023-01-01 12:00:00", receivedDeals[0].PostedAt, "Incorrect posted_at for first deal")
-		
-		// Test the second deal
-		assert.Equal(t, "Test Deal 2", receivedDeals[1].Title, "Incorrect title for second deal")
-		assert.Equal(t, "$20.99", receivedDeals[1].Price, "Incorrect price for second deal")
-		assert.Equal(t, server.URL+"/deal/2", receivedDeals[1].Link, "Incorrect link for second deal")
-		assert.Equal(t, server.URL+"/img/2.jpg", receivedDeals[1].Thumbnail, "Incorrect thumbnail for second deal")
-		assert.Equal(t, "2023-01-02 12:00:00", receivedDeals[1].PostedAt, "Incorrect posted_at for second deal")
+
+		expectedDeal1 := crawler.HotDeal{
+			Title:     "Test Deal 1",
+			Price:     "$10.99",
+			Link:      server.URL + "/deal/1",
+			Thumbnail: server.URL + "/img/1.jpg",
+			PostedAt:  "2023-01-01 12:00:00",
+		}
+		expectedDeal2 := crawler.HotDeal{
+			Title:     "Test Deal 2",
+			Price:     "$20.99",
+			Link:      server.URL + "/deal/2",
+			Thumbnail: server.URL + "/img/2.jpg",
+			PostedAt:  "2023-01-02 12:00:00",
+		}
+
+		// Assert the received deals contain the expected deals
+		assert.Contains(t, receivedDeals, expectedDeal1, "Received deals should contain expected deal 1")
+		assert.Contains(t, receivedDeals, expectedDeal2, "Received deals should contain expected deal 2")
 	case <-time.After(messageReceiveTimeout):
 		t.Fatalf("Timed out waiting for message after %v", messageReceiveTimeout)
 	}
