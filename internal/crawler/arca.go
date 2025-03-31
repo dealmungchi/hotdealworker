@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/base64"
 	"errors"
 	"strings"
 	"time"
@@ -74,6 +75,11 @@ func (c *ArcaCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	thumb, _ := s.Find("a.title.preview-image div.vrow-preview img").Attr("src")
 	if thumb != "" && strings.HasPrefix(thumb, "//") {
 		thumb = "https:" + thumb
+		data, err := helpers.FetchSimply(thumb)
+		if err != nil {
+			return nil, err
+		}
+		thumb = base64.StdEncoding.EncodeToString(data)
 	}
 
 	postedAt, _ := s.Find("span.col-time time").Attr("datetime")

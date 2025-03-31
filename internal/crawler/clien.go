@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/base64"
 	"errors"
 	"regexp"
 	"strings"
@@ -87,6 +88,11 @@ func (c *ClienCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 
 	thumbnail, _ := s.Find("div.list_img a.list_thumbnail img").Attr("src")
 	thumbnail = strings.TrimSpace(thumbnail)
+	data, err := helpers.FetchSimply(thumbnail)
+	if err != nil {
+		return nil, err
+	}
+	thumbnail = base64.StdEncoding.EncodeToString(data)
 
 	postedAt := strings.TrimSpace(s.Find("div.list_time span.time.popover span.timestamp").Text())
 

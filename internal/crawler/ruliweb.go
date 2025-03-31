@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/base64"
 	"net/url"
 	"regexp"
 	"strings"
@@ -85,6 +86,11 @@ func (c *RuliwebCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 		if style, exists := thumb.Attr("style"); exists {
 			thumbnail = extractURLFromStyle(style)
 			thumbnail = resolveURL(c.URL, thumbnail)
+			data, err := helpers.FetchSimply(thumbnail)
+			if err != nil {
+				return nil, err
+			}
+			thumbnail = base64.StdEncoding.EncodeToString(data)
 		}
 	}
 

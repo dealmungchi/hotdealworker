@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/base64"
 	"errors"
 	"strings"
 	"time"
@@ -70,9 +71,11 @@ func (c *QuasarCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	price := strings.TrimSpace(s.Find("div.market-info-list-cont div.market-info-sub p").First().Find("span.text-orange").Text())
 
 	thumb, _ := s.Find("div.market-info-list div.thumb-wrap a.thumb img.maxImg").Attr("src")
-	if thumb != "" && strings.HasPrefix(thumb, "//") {
-		thumb = "https:" + thumb
+	data, err := helpers.FetchSimply(thumb)
+	if err != nil {
+		return nil, err
 	}
+	thumb = base64.StdEncoding.EncodeToString(data)
 
 	postedAt := strings.TrimSpace(s.Find("span.date").Text())
 

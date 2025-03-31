@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/base64"
 	"errors"
 	"strings"
 	"time"
@@ -75,6 +76,11 @@ func (c *FMKoreaCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	}
 	if strings.HasPrefix(thumb, "//") {
 		thumb = "https:" + thumb
+		data, err := helpers.FetchSimply(thumb)
+		if err != nil {
+			return nil, err
+		}
+		thumb = base64.StdEncoding.EncodeToString(data)
 	}
 
 	postedAt := strings.TrimSpace(s.Find("div span.regdate").Text())

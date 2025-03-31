@@ -70,12 +70,6 @@ func (c *CoolandjoyCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) 
 
 	price := strings.TrimSpace(s.Find("div.float-right font").Text())
 
-	thumbnail := ""
-	imgSel := s.Find("a.thumb img")
-	if src, ok := imgSel.Attr("src"); ok {
-		thumbnail = src
-	}
-
 	postedAtSel := s.Find("div.float-left.float-md-none.d-md-table-cell.nw-6.nw-md-auto.f-sm.font-weight-normal.py-md-2.pr-md-1")
 	postedAtSel.Find("i").Remove()
 	postedAtSel.Find("span").Remove()
@@ -86,7 +80,7 @@ func (c *CoolandjoyCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) 
 		Title:     title,
 		Link:      link,
 		Price:     price,
-		Thumbnail: thumbnail,
+		Thumbnail: "",
 		PostedAt:  postedAt,
 		Provider:  "Coolandjoy",
 	}, nil

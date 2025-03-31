@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"encoding/base64"
 	"errors"
 	"net/url"
 	"strings"
@@ -91,6 +92,11 @@ func (c *PpomEnCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 					}
 				}
 			}
+			data, err := helpers.FetchSimply(thumbnail)
+			if err != nil {
+				return nil, err
+			}
+			thumbnail = base64.StdEncoding.EncodeToString(data)
 		}
 	}
 

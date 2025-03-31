@@ -42,6 +42,27 @@ func GenerateRandomCookie() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+func FetchSimply(url string) ([]byte, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return data, nil
+}
+
 // FetchWithRandomHeaders sends an HTTP GET request with randomized headers,
 // converts the response body to UTF-8 (if needed), and returns it as an io.Reader.
 func FetchWithRandomHeaders(url string) (io.Reader, error) {
