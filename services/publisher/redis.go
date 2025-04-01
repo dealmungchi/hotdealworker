@@ -30,19 +30,15 @@ func NewRedisPublisher(ctx context.Context, addr string, db int, stream string) 
 
 // Publish publishes a message to a Redis stream
 // The message is base64 encoded before publishing
-func (p *RedisPublisher) Publish(message []byte) error {
-	// Make a copy of the message to ensure thread safety
-	messageCopy := make([]byte, len(message))
-	copy(messageCopy, message)
-
+func (p *RedisPublisher) Publish(key string, message []byte) error {
 	// Base64 encode the message
-	encodedMessage := base64.StdEncoding.EncodeToString(messageCopy)
+	encodedMessage := base64.StdEncoding.EncodeToString(message)
 
 	// Publish to Redis
 	return p.client.XAdd(p.ctx, &redis.XAddArgs{
 		Stream: p.stream,
 		Values: map[string]interface{}{
-			"b64_hotdeals": encodedMessage,
+			key: encodedMessage,
 		},
 	}).Err()
 }

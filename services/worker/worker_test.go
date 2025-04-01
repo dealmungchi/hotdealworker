@@ -34,6 +34,10 @@ func (m *MockCrawler) GetName() string {
 	return m.name
 }
 
+func (m *MockCrawler) GetProvider() string {
+	return "Test"
+}
+
 // MockPublisher implements the publisher.Publisher interface for testing
 type MockPublisher struct {
 	mu       sync.Mutex
@@ -51,7 +55,7 @@ func NewMockPublisher() *MockPublisher {
 	}
 }
 
-func (m *MockPublisher) Publish(message []byte) error {
+func (m *MockPublisher) Publish(key string, message []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

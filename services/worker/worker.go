@@ -85,7 +85,7 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 			return
 		}
 
-		if err := w.publisher.Publish(dealData); err != nil {
+		if err := w.publisher.Publish(c.GetProvider(), dealData); err != nil {
 			w.logger.LogError(crawlerName, err)
 		}
 	}

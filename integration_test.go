@@ -102,6 +102,10 @@ func (c *TestCrawler) GetName() string {
 	return "TestCrawler"
 }
 
+func (c *TestCrawler) GetProvider() string {
+	return "Test"
+}
+
 func (c *TestCrawler) FetchDeals() ([]crawler.HotDeal, error) {
 	utf8Body, err := helpers.FetchWithRandomHeaders(c.URL)
 	if err != nil {
@@ -224,7 +228,7 @@ func TestIntegration(t *testing.T) {
 
 		// Decode the base64 message payload
 		decoded, err := base64.StdEncoding.DecodeString(
-			message[0].Messages[0].Values["b64_hotdeals"].(string),
+			message[0].Messages[0].Values["test_key"].(string),
 		)
 		if err != nil {
 			t.Errorf("Failed to decode base64 message: %v", err)
@@ -286,7 +290,7 @@ func TestIntegration(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// Publish the deals to Redis
-		if err := redisPublisher.Publish(dealsJSON); err != nil {
+		if err := redisPublisher.Publish("test_key", dealsJSON); err != nil {
 			errChan <- fmt.Errorf("failed to publish deals to Redis: %w", err)
 			return
 		}

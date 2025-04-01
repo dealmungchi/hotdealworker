@@ -20,6 +20,9 @@ type Crawler interface {
 
 	// GetName returns the crawler's name for logging and identification
 	GetName() string
+
+	// GetProvider returns the provider name for the crawler
+	GetProvider() string
 }
 
 // ProcessorFunc defines the function signature for processing a single deal

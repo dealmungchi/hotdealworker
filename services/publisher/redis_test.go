@@ -43,12 +43,12 @@ func TestRedisPublisher(t *testing.T) {
 			Block:    0,
 		}).Result()
 		assert.NoError(t, err)
-		messages <- message[0].Messages[0].Values["b64_hotdeals"].(string)
+		messages <- message[0].Messages[0].Values["test_key"].(string)
 	}()
 
 	time.Sleep(100 * time.Millisecond)
 
-	err = publisher.Publish([]byte("test_message"))
+	err = publisher.Publish("test_key", []byte("test_message"))
 	assert.NoError(t, err)
 
 	select {

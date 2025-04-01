@@ -114,6 +114,11 @@ func (c *BaseCrawler) GetName() string {
 	return reflect.TypeOf(c).Elem().Name()
 }
 
+// GetProvider returns the provider name for the crawler
+func (c *BaseCrawler) GetProvider() string {
+	return c.Provider
+}
+
 // ResolveURL resolves a relative URL against the base URL
 func (c *BaseCrawler) ResolveURL(href string) string {
 	if href == "" {
