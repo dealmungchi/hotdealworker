@@ -28,8 +28,8 @@ type ProcessorFunc func(*goquery.Selection) (*HotDeal, error)
 // IDExtractorFunc defines the function signature for extracting an ID from a URL
 type IDExtractorFunc func(string) (string, error)
 
-// PostedAtHandlerFunc defines a function to extract posted time from selection
-type PostedAtHandlerFunc func(*goquery.Selection) string
+// CustomElementHandlerFunc defines a function to customize extraction logic for elements
+type CustomElementHandlerFunc func(*goquery.Selection) string
 
 // ElementRemoval defines elements to remove from a selection before extracting text
 type ElementRemoval struct {
@@ -48,19 +48,29 @@ type Selectors struct {
 	PriceRegex  string
 	ThumbRegex  string
 	ClassFilter string
-	// Special processors for certain elements
-	RemoveElements []ElementRemoval // Elements to remove before extracting text
-	// Special handlers for specific processing logic
-	PostedAtHandler PostedAtHandlerFunc // Custom handler for postedAt extraction
+}
+
+// CustomHandlers contains custom handlers for element processing
+type CustomHandlers struct {
+	// Map paths to custom handlers
+	ElementHandlers map[string]CustomElementHandlerFunc
+}
+
+// ElementTransformers contains configurations for transforming elements
+type ElementTransformers struct {
+	// Elements to remove from selections
+	RemoveElements []ElementRemoval
 }
 
 // CrawlerConfig contains configuration for a crawler
 type CrawlerConfig struct {
-	URL         string
-	CacheKey    string
-	BlockTime   int
-	BaseURL     string
-	Provider    string
-	Selectors   Selectors
-	IDExtractor IDExtractorFunc
+	URL                 string
+	CacheKey            string
+	BlockTime           int
+	BaseURL             string
+	Provider            string
+	Selectors           Selectors
+	IDExtractor         IDExtractorFunc
+	CustomHandlers      CustomHandlers
+	ElementTransformers ElementTransformers
 }

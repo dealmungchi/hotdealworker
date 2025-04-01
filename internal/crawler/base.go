@@ -35,29 +35,24 @@ func (c *BaseCrawler) fetchWithCache() (io.Reader, error) {
 	if c.CacheSvc != nil && c.CacheKey != "" {
 		_, err := c.CacheSvc.Get(c.CacheKey)
 		if err == nil {
-			fmt.Printf("[%s] Rate limited: %d seconds remaining\n", c.Provider, c.BlockTime/time.Second)
 			return nil, fmt.Errorf("%s: %d초 동안 더 이상 요청을 보내지 않음", c.CacheKey, c.BlockTime/time.Second)
 		}
 	}
 
 	// Fetch the page
-	fmt.Printf("[%s] Fetching URL: %s\n", c.Provider, c.URL)
 	utf8Body, err := helpers.FetchWithRandomHeaders(c.URL)
 	if err != nil {
-		fmt.Printf("[%s] Error fetching URL %s: %v\n", c.Provider, c.URL, err)
 		if c.CacheSvc != nil && c.CacheKey != "" && err.Error() != "" {
 			if fmt.Sprintf("%v", err)[:12] == "rate limited" {
 				// Set rate limiting cache
-				fmt.Printf("[%s] Setting rate limit for %d seconds\n", c.Provider, c.BlockTime/time.Second)
 				if setErr := c.CacheSvc.Set(c.CacheKey, []byte(fmt.Sprintf("%d", c.BlockTime/time.Second)), c.BlockTime); setErr != nil {
-					fmt.Printf("[%s] Error setting rate limit: %v\n", c.Provider, setErr)
+					return nil, setErr
 				}
 			}
 		}
 		return nil, err
 	}
 
-	fmt.Printf("[%s] Successfully fetched URL\n", c.Provider)
 	return utf8Body, nil
 }
 

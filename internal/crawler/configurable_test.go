@@ -196,7 +196,7 @@ func TestPostedAtHandlerFunc(t *testing.T) {
 	`
 	doc1, err := goquery.NewDocumentFromReader(strings.NewReader(html1))
 	assert.NoError(t, err)
-	
+
 	// Call the handler directly
 	postedAt1 := handler(doc1.Find("li"))
 	assert.Equal(t, "2023-01-01", postedAt1)
@@ -215,11 +215,11 @@ func TestPostedAtHandlerFunc(t *testing.T) {
 	`
 	doc2, err := goquery.NewDocumentFromReader(strings.NewReader(html2))
 	assert.NoError(t, err)
-	
+
 	// Call the handler directly
 	postedAt2 := handler(doc2.Find("li"))
 	assert.Equal(t, "2023-02-01", postedAt2)
-	
+
 	// Test case 3: Both selectors are empty
 	html3 := `
 		<li>
@@ -230,11 +230,11 @@ func TestPostedAtHandlerFunc(t *testing.T) {
 	`
 	doc3, err := goquery.NewDocumentFromReader(strings.NewReader(html3))
 	assert.NoError(t, err)
-	
+
 	// Call the handler directly
 	postedAt3 := handler(doc3.Find("li"))
 	assert.Equal(t, "", postedAt3)
-	
+
 	// Now test the integration with a configurable crawler
 	// Create a configurable crawler with the custom handler
 	crawler := NewConfigurableCrawler(CrawlerConfig{
@@ -244,14 +244,18 @@ func TestPostedAtHandlerFunc(t *testing.T) {
 		BaseURL:   "https://damoang.net",
 		Provider:  "Damoang",
 		Selectors: Selectors{
-			DealList:        "li",
-			Title:           "a.title",
-			Link:            "a.title",
-			PostedAt:        "span.orangered.da-list-date, div.wr-date.text-nowrap",
-			PostedAtHandler: handler,
+			DealList: "li",
+			Title:    "a.title",
+			Link:     "a.title",
+			PostedAt: "span.orangered.da-list-date, div.wr-date.text-nowrap",
 		},
 		IDExtractor: func(link string) (string, error) {
 			return "123", nil
+		},
+		CustomHandlers: CustomHandlers{
+			ElementHandlers: map[string]CustomElementHandlerFunc{
+				"postedAt": handler,
+			},
 		},
 	}, mockCache)
 
@@ -264,7 +268,7 @@ func TestPostedAtHandlerFunc(t *testing.T) {
 	`
 	doc4, err := goquery.NewDocumentFromReader(strings.NewReader(html4))
 	assert.NoError(t, err)
-	
+
 	// Process the deal
 	deal, err := crawler.processDeal(doc4.Find("li"))
 	assert.NoError(t, err)
