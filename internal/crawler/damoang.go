@@ -11,7 +11,7 @@ import (
 )
 
 // NewDamoangCrawler creates a Damoang crawler
-func NewDamoangCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewDamoangCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	// Create custom handlers for posted time
 	customHandlers := CustomHandlers{
 		ElementHandlers: map[string]CustomElementHandlerFunc{
@@ -37,10 +37,10 @@ func NewDamoangCrawler(cfg *config.Config, cacheSvc cache.CacheService) *Configu
 
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Damoang crawler configuration
-		URL:       cfg.DamoangURL,
+		URL:       cfg.DamoangURL + "/economy",
 		CacheKey:  "damoang_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://damoang.net",
+		BaseURL:   cfg.DamoangURL,
 		Provider:  "Damoang",
 		Selectors: Selectors{
 			DealList:   "section#bo_list ul.list-group.list-group-flush.border-bottom li:not(.hd-wrap):not(.da-atricle-row--notice)",

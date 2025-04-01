@@ -7,13 +7,13 @@ import (
 )
 
 // NewPpomEnCrawler creates a PpomEn crawler
-func NewPpomEnCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewPpomEnCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	return NewConfigurableCrawler(CrawlerConfig{
 		// PpomEn crawler configuration
-		URL:       cfg.PpomEnURL,
+		URL:       cfg.PpomEnURL + "/zboard/zboard.php?id=ppomppu4",
 		CacheKey:  "ppom_en_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://www.ppomppu.co.kr",
+		BaseURL:   cfg.PpomEnURL,
 		Provider:  "PpomEn",
 		Selectors: Selectors{
 			DealList:   "tr.baseList.bbs_new1",

@@ -11,7 +11,7 @@ import (
 )
 
 // NewRuliwebCrawler creates a Ruliweb crawler
-func NewRuliwebCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewRuliwebCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	// Create custom handler for posted time
 	customHandlers := CustomHandlers{
 		ElementHandlers: map[string]CustomElementHandlerFunc{
@@ -25,10 +25,10 @@ func NewRuliwebCrawler(cfg *config.Config, cacheSvc cache.CacheService) *Configu
 
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Ruliweb crawler configuration
-		URL:       cfg.RuliwebURL,
+		URL:       cfg.RuliwebURL + "/market/board/1020?view=thumbnail&page=1",
 		CacheKey:  "ruliweb_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://bbs.ruliweb.com",
+		BaseURL:   cfg.RuliwebURL,
 		Provider:  "Ruliweb",
 		Selectors: Selectors{
 			DealList:   "tr.table_body.normal",

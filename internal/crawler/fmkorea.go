@@ -7,7 +7,7 @@ import (
 )
 
 // NewFMKoreaCrawler creates an FMKorea crawler
-func NewFMKoreaCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewFMKoreaCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	// Create transformers for element cleanup
 	elementTransformers := ElementTransformers{
 		RemoveElements: []ElementRemoval{
@@ -17,10 +17,10 @@ func NewFMKoreaCrawler(cfg *config.Config, cacheSvc cache.CacheService) *Configu
 
 	return NewConfigurableCrawler(CrawlerConfig{
 		// FMKorea crawler configuration
-		URL:       cfg.FMKoreaURL,
+		URL:       cfg.FMKoreaURL + "/hotdeal",
 		CacheKey:  "fmkorea_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://www.fmkorea.com",
+		BaseURL:   cfg.FMKoreaURL,
 		Provider:  "FMKorea",
 		Selectors: Selectors{
 			DealList:   "ul li.li",

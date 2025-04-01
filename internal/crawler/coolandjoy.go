@@ -7,7 +7,7 @@ import (
 )
 
 // NewCoolandjoyCrawler creates a Coolandjoy crawler
-func NewCoolandjoyCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewCoolandjoyCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	// Create transformers for element cleanup
 	elementTransformers := ElementTransformers{
 		RemoveElements: []ElementRemoval{
@@ -18,10 +18,10 @@ func NewCoolandjoyCrawler(cfg *config.Config, cacheSvc cache.CacheService) *Conf
 
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Coolandjoy crawler configuration
-		URL:       cfg.CoolandjoyURL,
+		URL:       cfg.CoolandjoyURL + "/bbs/jirum",
 		CacheKey:  "coolandjoy_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://coolenjoy.net",
+		BaseURL:   cfg.CoolandjoyURL,
 		Provider:  "Coolandjoy",
 		Selectors: Selectors{
 			DealList:   "ul.na-table li",

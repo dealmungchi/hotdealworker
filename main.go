@@ -26,7 +26,12 @@ func main() {
 	cacheService := cache.NewMemcacheService(cfg.MemcacheAddr)
 
 	// Initialize publisher
-	redisPublisher := publisher.NewRedisPublisher(ctx, cfg.RedisAddr, cfg.RedisDB)
+	redisPublisher := publisher.NewRedisPublisher(
+		ctx,
+		cfg.RedisAddr,
+		cfg.RedisDB,
+		cfg.RedisStream,
+	)
 	defer redisPublisher.Close()
 
 	// Create crawlers
@@ -39,7 +44,6 @@ func main() {
 		redisPublisher,
 		logger,
 		cfg.CrawlInterval,
-		cfg.RedisChannel,
 	)
 
 	log.Printf("Starting hot deal worker... in %s environment", cfg.Environment)

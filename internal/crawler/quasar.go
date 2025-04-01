@@ -7,13 +7,13 @@ import (
 )
 
 // NewQuasarCrawler creates a Quasar crawler
-func NewQuasarCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewQuasarCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Quasar crawler configuration
-		URL:       cfg.QuasarURL,
+		URL:       cfg.QuasarURL + "/bbs/qb_saleinfo",
 		CacheKey:  "quasar_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://quasarzone.com",
+		BaseURL:   cfg.QuasarURL,
 		Provider:  "Quasar",
 		Selectors: Selectors{
 			DealList:   "div.market-type-list.market-info-type-list.relative table tbody tr",

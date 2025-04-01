@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -102,7 +103,7 @@ func (c *TestCrawler) GetName() string {
 }
 
 func (c *TestCrawler) FetchDeals() ([]crawler.HotDeal, error) {
-	utf8Body, err := helpers.FetchWithRandomHeaders(c.server.URL)
+	utf8Body, err := helpers.FetchWithRandomHeaders(c.URL)
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +151,13 @@ func (c *TestCrawler) processDeal(s *goquery.Selection) *crawler.HotDeal {
 	title := titleSel.Text()
 	link, _ := titleSel.Attr("href")
 	if link != "" {
-		link = c.server.URL + link
+		link = c.URL + link
 	}
 
 	price := s.Find("div.price").Text()
 	thumb, _ := s.Find("div.thumb img").Attr("src")
 	if thumb != "" {
-		thumb = c.server.URL + thumb
+		thumb = c.URL + thumb
 	}
 
 	postedAt := s.Find("div.date").Text()
@@ -202,27 +203,29 @@ func TestIntegration(t *testing.T) {
 		t.Skip("Redis is not available, skipping integration test")
 	}
 
-	// Create a test channel name
-	testChannel := "test_hotdeals"
+	err = redisClient.XGroupCreateMkStream(ctx, "test_stream_i", "test_group", "$").Err()
+	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
+		panic(err)
+	}
 
-	// Create a subscription to the test channel
-	pubsub := redisClient.Subscribe(ctx, testChannel)
-	defer pubsub.Close()
-
-	// Create a channel to receive the decoded and unmarshaled HotDeal objects
+	// Create a stream to receive the decoded and unmarshaled HotDeal objects
 	messages := make(chan []crawler.HotDeal, 1)
 
 	// Start a goroutine to receive and process messages
 	go func() {
 		// Wait for a message
-		message, err := pubsub.ReceiveMessage(ctx)
-		if err != nil {
-			t.Errorf("Failed to receive message: %v", err)
-			return
-		}
+		message, err := redisClient.XReadGroup(ctx, &redis.XReadGroupArgs{
+			Streams:  []string{"test_stream_i", ">"},
+			Group:    "test_group",
+			Consumer: "test_consumer",
+			Block:    0,
+		}).Result()
+		assert.NoError(t, err)
 
 		// Decode the base64 message payload
-		decoded, err := base64.StdEncoding.DecodeString(message.Payload)
+		decoded, err := base64.StdEncoding.DecodeString(
+			message[0].Messages[0].Values["b64_hotdeals"].(string),
+		)
 		if err != nil {
 			t.Errorf("Failed to decode base64 message: %v", err)
 			return
@@ -236,7 +239,7 @@ func TestIntegration(t *testing.T) {
 			return
 		}
 
-		// Send the decoded deals to the channel
+		// Send the decoded deals to the stream
 		messages <- deals
 	}()
 
@@ -249,13 +252,13 @@ func TestIntegration(t *testing.T) {
 	testCrawler := NewTestCrawler(server, mockCache)
 
 	// Create a Redis publisher pointing to the same Redis instance we're subscribing to
-	redisPublisher := publisher.NewRedisPublisher(ctx, redisAddr, 0)
+	redisPublisher := publisher.NewRedisPublisher(ctx, redisAddr, 0, "test_stream_i")
 	defer redisPublisher.Close()
 
 	// Set a longer timeout for potentially slow test environments
 	timeout := 10 * time.Second
 
-	// Create a channel to signal errors from the publisher goroutine
+	// Create a stream to signal errors from the publisher goroutine
 	errChan := make(chan error, 1)
 
 	// Create a separate goroutine for publishing to avoid blocking
@@ -283,7 +286,7 @@ func TestIntegration(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// Publish the deals to Redis
-		if err := redisPublisher.Publish(testChannel, dealsJSON); err != nil {
+		if err := redisPublisher.Publish(dealsJSON); err != nil {
 			errChan <- fmt.Errorf("failed to publish deals to Redis: %w", err)
 			return
 		}

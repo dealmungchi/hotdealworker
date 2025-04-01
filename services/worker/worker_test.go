@@ -38,6 +38,7 @@ func (m *MockCrawler) GetName() string {
 type MockPublisher struct {
 	mu       sync.Mutex
 	messages map[string][]byte
+	stream   string
 }
 
 // Ensure MockPublisher implements publisher.Publisher
@@ -46,10 +47,11 @@ var _ publisher.Publisher = (*MockPublisher)(nil)
 func NewMockPublisher() *MockPublisher {
 	return &MockPublisher{
 		messages: make(map[string][]byte),
+		stream:   "test_stream",
 	}
 }
 
-func (m *MockPublisher) Publish(channel string, message []byte) error {
+func (m *MockPublisher) Publish(message []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -57,7 +59,7 @@ func (m *MockPublisher) Publish(channel string, message []byte) error {
 	messageCopy := make([]byte, len(message))
 	copy(messageCopy, message)
 
-	m.messages[channel] = messageCopy
+	m.messages[m.stream] = messageCopy
 	return nil
 }
 
@@ -126,7 +128,6 @@ func TestWorkerCrawlAndPublish(t *testing.T) {
 		mockPublisher,
 		mockLogger,
 		1*time.Second,
-		"test_channel",
 	)
 
 	// Run the crawlAndPublish method
@@ -136,10 +137,10 @@ func TestWorkerCrawlAndPublish(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Verify that the deals were published
-	assert.Contains(t, mockPublisher.messages, "test_channel", "Channel should exist in messages")
+	assert.Contains(t, mockPublisher.messages, "test_stream", "Channel should exist in messages")
 
 	// Verify the message contains both deals
-	messageContent := string(mockPublisher.messages["test_channel"])
+	messageContent := string(mockPublisher.messages["test_stream"])
 	assert.Contains(t, messageContent, "Test Deal 1", "Message should contain first deal")
 	assert.Contains(t, messageContent, "Test Deal 2", "Message should contain second deal")
 
@@ -166,7 +167,6 @@ func TestWorkerWithError(t *testing.T) {
 		mockPublisher,
 		mockLogger,
 		1*time.Second,
-		"test_channel",
 	)
 
 	// Run the crawlAndPublish method
@@ -221,7 +221,6 @@ func TestWorkerRunCrawlers(t *testing.T) {
 		mockPublisher,
 		mockLogger,
 		1*time.Second,
-		"test_channel",
 	)
 
 	// Run the runCrawlers method
@@ -230,13 +229,13 @@ func TestWorkerRunCrawlers(t *testing.T) {
 	// Wait a short time for all goroutines to complete and messages to be processed
 	time.Sleep(300 * time.Millisecond)
 
-	// Verify that a crawler published to the channel
-	assert.Contains(t, mockPublisher.messages, "test_channel", "Channel should exist in messages")
+	// Verify that a crawler published to the stream
+	assert.Contains(t, mockPublisher.messages, "test_stream", "Channel should exist in messages")
 
 	// Get the message content
-	messageContent := string(mockPublisher.messages["test_channel"])
+	messageContent := string(mockPublisher.messages["test_stream"])
 
-	// Due to race conditions, we can't guarantee which crawler's result will be in the channel
+	// Due to race conditions, we can't guarantee which crawler's result will be in the stream
 	// We just need to make sure one of them succeeded
 	hasDeals := strings.Contains(messageContent, "Test Deal 1") ||
 		strings.Contains(messageContent, "Test Deal 2")

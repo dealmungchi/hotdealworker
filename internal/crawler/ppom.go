@@ -7,13 +7,13 @@ import (
 )
 
 // NewPpomCrawler creates a Ppom crawler
-func NewPpomCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewPpomCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Ppom crawler configuration
-		URL:       cfg.PpomURL,
+		URL:       cfg.PpomURL + "/zboard/zboard.php?id=ppomppu",
 		CacheKey:  "ppom_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://www.ppomppu.co.kr",
+		BaseURL:   cfg.PpomURL,
 		Provider:  "Ppom",
 		Selectors: Selectors{
 			DealList:   "tr.baseList.bbs_new1",

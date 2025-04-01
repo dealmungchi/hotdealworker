@@ -15,12 +15,11 @@ import (
 
 // Worker handles the crawling and publishing process
 type Worker struct {
-	ctx        context.Context
-	crawlers   []crawler.Crawler
-	publisher  publisher.Publisher
-	logger     helpers.LoggerInterface
-	interval   time.Duration
-	pubChannel string
+	ctx           context.Context
+	crawlers      []crawler.Crawler
+	publisher     publisher.Publisher
+	logger        helpers.LoggerInterface
+	crawlInterval time.Duration
 }
 
 // NewWorker creates a new worker
@@ -29,16 +28,14 @@ func NewWorker(
 	crawlers []crawler.Crawler,
 	pub publisher.Publisher,
 	logger helpers.LoggerInterface,
-	interval time.Duration,
-	pubChannel string,
+	crawlInterval time.Duration,
 ) *Worker {
 	return &Worker{
-		ctx:        ctx,
-		crawlers:   crawlers,
-		publisher:  pub,
-		logger:     logger,
-		interval:   interval,
-		pubChannel: pubChannel,
+		ctx:           ctx,
+		crawlers:      crawlers,
+		publisher:     pub,
+		logger:        logger,
+		crawlInterval: crawlInterval,
 	}
 }
 
@@ -51,7 +48,7 @@ func (w *Worker) Start() {
 		if os.Getenv("HOTDEAL_ENVIRONMENT") != "production" {
 			w.logger.LogInfo("크롤링 소요 시간: %s", elapsed)
 		}
-		time.Sleep(w.interval)
+		time.Sleep(w.crawlInterval)
 	}
 }
 
@@ -88,7 +85,7 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 			return
 		}
 
-		if err := w.publisher.Publish(w.pubChannel, dealData); err != nil {
+		if err := w.publisher.Publish(dealData); err != nil {
 			w.logger.LogError(crawlerName, err)
 		}
 	}

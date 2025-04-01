@@ -9,9 +9,9 @@ import (
 // Config represents the application configuration
 type Config struct {
 	// Redis configuration
-	RedisAddr    string
-	RedisDB      int
-	RedisChannel string
+	RedisAddr   string
+	RedisDB     int
+	RedisStream string
 
 	// Memcache configuration
 	MemcacheAddr string
@@ -35,25 +35,25 @@ type Config struct {
 }
 
 // LoadConfig loads the configuration from environment variables with defaults
-func LoadConfig() *Config {
+func LoadConfig() Config {
 	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
 	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "60"))
 
-	return &Config{
+	return Config{
 		RedisAddr:     getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisDB:       redisDB,
-		RedisChannel:  getEnv("REDIS_CHANNEL", "hotdeals"),
+		RedisStream:   getEnv("REDIS_STREAM", "hotdeals"),
 		MemcacheAddr:  getEnv("MEMCACHE_ADDR", "localhost:11211"),
 		CrawlInterval: time.Duration(crawlInterval) * time.Second,
-		FMKoreaURL:    getEnv("FMKOREA_URL", "http://www.fmkorea.com/hotdeal"),
-		DamoangURL:    getEnv("DAMOANG_URL", "https://damoang.net/economy"),
-		ArcaURL:       getEnv("ARCA_URL", "https://arca.live/b/hotdeal"),
-		QuasarURL:     getEnv("QUASAR_URL", "https://quasarzone.com/bbs/qb_saleinfo"),
-		CoolandjoyURL: getEnv("COOLANDJOY_URL", "https://coolenjoy.net/bbs/jirum"),
-		ClienURL:      getEnv("CLIEN_URL", "https://www.clien.net/service/board/jirum"),
-		PpomURL:       getEnv("PPOM_URL", "https://www.ppomppu.co.kr/zboard/zboard.php?id=ppomppu"),
-		PpomEnURL:     getEnv("PPOMEN_URL", "https://www.ppomppu.co.kr/zboard/zboard.php?id=ppomppu4"),
-		RuliwebURL:    getEnv("RULIWEB_URL", "https://bbs.ruliweb.com/market/board/1020?view=thumbnail&page=1"),
+		FMKoreaURL:    getEnv("FMKOREA_URL", "http://www.fmkorea.com"),
+		DamoangURL:    getEnv("DAMOANG_URL", "https://damoang.net"),
+		ArcaURL:       getEnv("ARCA_URL", "https://arca.live"),
+		QuasarURL:     getEnv("QUASAR_URL", "https://quasarzone.com"),
+		CoolandjoyURL: getEnv("COOLANDJOY_URL", "https://coolenjoy.net"),
+		ClienURL:      getEnv("CLIEN_URL", "https://www.clien.net"),
+		PpomURL:       getEnv("PPOM_URL", "https://www.ppomppu.co.kr"),
+		PpomEnURL:     getEnv("PPOMEN_URL", "https://www.ppomppu.co.kr"),
+		RuliwebURL:    getEnv("RULIWEB_URL", "https://bbs.ruliweb.com"),
 		Environment:   getEnv("HOTDEAL_ENVIRONMENT", "development"),
 	}
 }

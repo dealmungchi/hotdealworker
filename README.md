@@ -28,18 +28,18 @@ A worker program that crawls hot deal information and publishes it to Redis.
 |----------|-------------|---------|
 | REDIS_ADDR | Redis server address | localhost:6379 |
 | REDIS_DB | Redis database number | 0 |
-| REDIS_CHANNEL | Redis publish channel | hotdeals |
+| REDIS_STREAM | Redis publish stream | hotdeals |
 | MEMCACHE_ADDR | Memcached server address | localhost:11211 |
 | CRAWL_INTERVAL_SECONDS | Crawling interval (in seconds) | 60 |
-| FMKOREA_URL | FMKorea crawling URL | http://www.fmkorea.com/hotdeal |
-| DAMOANG_URL | Damoang crawling URL | https://damoang.net/economy |
-| ARCA_URL | Arca Live crawling URL | https://arca.live/b/hotdeal |
-| QUASAR_URL | Quasar Zone crawling URL | https://quasarzone.com/bbs/qb_saleinfo |
-| COOLANDJOY_URL | Coolandjoy crawling URL | https://coolenjoy.net/bbs/jirum |
-| CLIEN_URL | Clien crawling URL | https://www.clien.net/service/board/jirum |
-| PPOM_URL | Ppomppu crawling URL | https://www.ppomppu.co.kr/zboard/zboard.php?id=ppomppu |
-| PPOMEN_URL | Ppomppu English crawling URL | https://www.ppomppu.co.kr/zboard/zboard.php?id=ppomppu4 |
-| RULIWEB_URL | Ruliweb crawling URL | https://bbs.ruliweb.com/market/board/1020?view=thumbnail&page=1 |
+| FMKOREA_URL | FMKorea crawling URL | http://www.fmkorea.com |
+| DAMOANG_URL | Damoang crawling URL | https://damoang.net |
+| ARCA_URL | Arca Live crawling URL | https://arca.live |
+| QUASAR_URL | Quasar Zone crawling URL | https://quasarzone.com |
+| COOLANDJOY_URL | Coolandjoy crawling URL | https://coolenjoy.net |
+| CLIEN_URL | Clien crawling URL | https://www.clien.net/service |
+| PPOM_URL | Ppomppu crawling URL | https://www.ppomppu.co.kr |
+| PPOMEN_URL | Ppomppu English crawling URL | https://www.ppomppu.co.kr |
+| RULIWEB_URL | Ruliweb crawling URL | https://bbs.ruliweb.com |
 
 ## Installation
 
@@ -164,7 +164,7 @@ import (
 )
 
 // NewMySiteCrawler creates a crawler for MySite
-func NewMySiteCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewMySiteCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	// Define custom handlers if needed
 	customHandlers := CustomHandlers{
 		ElementHandlers: map[string]CustomElementHandlerFunc{
@@ -209,7 +209,7 @@ func NewMySiteCrawler(cfg *config.Config, cacheSvc cache.CacheService) *Configur
 3. Add the crawler to `factory.go`:
 
 ```go
-func createConfigurableCrawlers(cfg *config.Config, cacheSvc cache.CacheService) []Crawler {
+func createConfigurableCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
 	var crawlers []Crawler
 	
 	// Add existing crawlers

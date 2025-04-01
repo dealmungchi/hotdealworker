@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,11 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// This test requires a running Redis instance
-// If Redis is not available, the test will be skipped
 func TestRedisPublisher(t *testing.T) {
 	ctx := context.Background()
-	publisher := NewRedisPublisher(ctx, "localhost:6379", 0)
+	publisher := NewRedisPublisher(ctx, "localhost:6379", 0, "test_stream_r")
 	defer publisher.Close()
 
 	// Create a subscriber to verify the message was published
@@ -29,31 +28,29 @@ func TestRedisPublisher(t *testing.T) {
 		t.Skip("Redis is not available, skipping test")
 	}
 
-	// Create a subscription
-	pubsub := client.Subscribe(ctx, "test_channel")
-	defer pubsub.Close()
+	err = client.XGroupCreateMkStream(ctx, "test_stream_r", "test_group", "$").Err()
+	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
+		panic(err)
+	}
 
-	// Create a channel to receive messages
 	messages := make(chan string, 1)
-	
-	// Start a goroutine to receive messages
+
 	go func() {
-		message, err := pubsub.ReceiveMessage(ctx)
-		if err != nil {
-			t.Errorf("Failed to receive message: %v", err)
-			return
-		}
-		messages <- message.Payload
+		message, err := client.XReadGroup(ctx, &redis.XReadGroupArgs{
+			Streams:  []string{"test_stream_r", ">"},
+			Group:    "test_group",
+			Consumer: "test_consumer",
+			Block:    0,
+		}).Result()
+		assert.NoError(t, err)
+		messages <- message[0].Messages[0].Values["b64_hotdeals"].(string)
 	}()
 
-	// Give the subscription some time to be established
 	time.Sleep(100 * time.Millisecond)
 
-	// Publish a message
-	err = publisher.Publish("test_channel", []byte("test_message"))
+	err = publisher.Publish([]byte("test_message"))
 	assert.NoError(t, err)
 
-	// Wait for the message to be received
 	select {
 	case msg := <-messages:
 		// The message should be base64 encoded

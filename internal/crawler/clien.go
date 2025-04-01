@@ -9,13 +9,13 @@ import (
 )
 
 // NewClienCrawler creates a Clien crawler
-func NewClienCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewClienCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Clien crawler configuration
-		URL:       cfg.ClienURL,
+		URL:       cfg.ClienURL + "/service/board/jirum",
 		CacheKey:  "clien_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://www.clien.net",
+		BaseURL:   cfg.ClienURL,
 		Provider:  "Clien",
 		Selectors: Selectors{
 			DealList:    "div.list_item.symph_row.jirum",

@@ -9,7 +9,7 @@ import (
 )
 
 // NewArcaCrawler creates an Arca crawler
-func NewArcaCrawler(cfg *config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
+func NewArcaCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
 	// Create transformers for element cleanup
 	elementTransformers := ElementTransformers{
 		RemoveElements: []ElementRemoval{
@@ -19,10 +19,10 @@ func NewArcaCrawler(cfg *config.Config, cacheSvc cache.CacheService) *Configurab
 
 	return NewConfigurableCrawler(CrawlerConfig{
 		// Arca crawler configuration
-		URL:       cfg.ArcaURL,
+		URL:       cfg.ArcaURL + "/b/hotdeal",
 		CacheKey:  "arca_rate_limited",
 		BlockTime: 500,
-		BaseURL:   "https://arca.live",
+		BaseURL:   cfg.ArcaURL,
 		Provider:  "Arca",
 		Selectors: Selectors{
 			DealList:   "div.list-table.hybrid div.vrow.hybrid",
