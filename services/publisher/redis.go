@@ -3,7 +3,6 @@ package publisher
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -40,17 +39,12 @@ func (p *RedisPublisher) Publish(message []byte) error {
 	encodedMessage := base64.StdEncoding.EncodeToString(messageCopy)
 
 	// Publish to Redis
-	res, err := p.client.XAdd(p.ctx, &redis.XAddArgs{
+	return p.client.XAdd(p.ctx, &redis.XAddArgs{
 		Stream: p.stream,
 		Values: map[string]interface{}{
 			"b64_hotdeals": encodedMessage,
 		},
-	}).Result()
-
-	fmt.Println(res)
-
-	return err
-	// return p.client.Publish(p.ctx, stream, encodedMessage).Err()
+	}).Err()
 }
 
 // Close closes the Redis connection
