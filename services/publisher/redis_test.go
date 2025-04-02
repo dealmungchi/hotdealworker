@@ -12,7 +12,7 @@ import (
 
 func TestRedisPublisher(t *testing.T) {
 	ctx := context.Background()
-	publisher := NewRedisPublisher(ctx, "localhost:6379", 0, "test_stream_r")
+	publisher := NewRedisPublisher(ctx, "localhost:6379", 0, "test_stream_r", 1)
 	defer publisher.Close()
 
 	// Create a subscriber to verify the message was published
@@ -28,7 +28,7 @@ func TestRedisPublisher(t *testing.T) {
 		t.Skip("Redis is not available, skipping test")
 	}
 
-	err = client.XGroupCreateMkStream(ctx, "test_stream_r", "test_group", "$").Err()
+	err = client.XGroupCreateMkStream(ctx, "test_stream_r:0", "test_group", "$").Err()
 	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func TestRedisPublisher(t *testing.T) {
 
 	go func() {
 		message, err := client.XReadGroup(ctx, &redis.XReadGroupArgs{
-			Streams:  []string{"test_stream_r", ">"},
+			Streams:  []string{"test_stream_r:0", ">"},
 			Group:    "test_group",
 			Consumer: "test_consumer",
 			Block:    0,

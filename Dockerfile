@@ -23,7 +23,7 @@ COPY --from=builder /app/hotdealworker /app/hotdealworker
 # Set environment variables (can be overridden)
 ENV REDIS_ADDR=redis:6379
 ENV REDIS_DB=0
-ENV REDIS_STREAM=hotdeals
+ENV REDIS_STREAM_COUNT=1
 ENV MEMCACHE_ADDR=memcached:11211
 ENV CRAWL_INTERVAL_SECONDS=60
 ENV HOTDEAL_ENVIRONMENT=production

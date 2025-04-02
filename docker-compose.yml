@@ -11,7 +11,7 @@ services:
       - HOTDEAL_ENVIONMENT=production
       - REDIS_ADDR=redis:6379
       - REDIS_DB=0
-      - REDIS_STREAM=hotdeals
+      - REDIS_STREAM_COUNT=1
       - MEMCACHE_ADDR=memcached:11211
       - CRAWL_INTERVAL_SECONDS=60
     volumes:

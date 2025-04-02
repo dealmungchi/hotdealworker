@@ -207,7 +207,7 @@ func TestIntegration(t *testing.T) {
 		t.Skip("Redis is not available, skipping integration test")
 	}
 
-	err = redisClient.XGroupCreateMkStream(ctx, "test_stream_i", "test_group", "$").Err()
+	err = redisClient.XGroupCreateMkStream(ctx, "test_stream_i:0", "test_group", "$").Err()
 	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
 		panic(err)
 	}
@@ -219,7 +219,7 @@ func TestIntegration(t *testing.T) {
 	go func() {
 		// Wait for a message
 		message, err := redisClient.XReadGroup(ctx, &redis.XReadGroupArgs{
-			Streams:  []string{"test_stream_i", ">"},
+			Streams:  []string{"test_stream_i:0", ">"},
 			Group:    "test_group",
 			Consumer: "test_consumer",
 			Block:    0,
@@ -256,7 +256,7 @@ func TestIntegration(t *testing.T) {
 	testCrawler := NewTestCrawler(server, mockCache)
 
 	// Create a Redis publisher pointing to the same Redis instance we're subscribing to
-	redisPublisher := publisher.NewRedisPublisher(ctx, redisAddr, 0, "test_stream_i")
+	redisPublisher := publisher.NewRedisPublisher(ctx, redisAddr, 0, "test_stream_i", 1)
 	defer redisPublisher.Close()
 
 	// Set a longer timeout for potentially slow test environments

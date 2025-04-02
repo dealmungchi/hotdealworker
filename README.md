@@ -28,7 +28,7 @@ A worker program that crawls hot deal information and publishes it to Redis.
 |----------|-------------|---------|
 | REDIS_ADDR | Redis server address | localhost:6379 |
 | REDIS_DB | Redis database number | 0 |
-| REDIS_STREAM | Redis publish stream | hotdeals |
+| REDIS_STREAM_COUNT | Redis stream count | 1 |
 | MEMCACHE_ADDR | Memcached server address | localhost:11211 |
 | CRAWL_INTERVAL_SECONDS | Crawling interval (in seconds) | 60 |
 | FMKOREA_URL | FMKorea crawling URL | http://www.fmkorea.com |
