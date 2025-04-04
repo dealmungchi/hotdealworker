@@ -13,7 +13,7 @@ services:
       - REDIS_DB=0
       - REDIS_STREAM=streamHotdeals
       - REDIS_STREAM_COUNT=1
-      - REDIS_STREAM_MAX_LENGTH=100
+      - REDIS_STREAM_MAX_LENGTH=500
       - MEMCACHE_ADDR=memcached:11211
       - CRAWL_INTERVAL_SECONDS=60
     volumes:

@@ -30,7 +30,7 @@ A worker program that crawls hot deal information and publishes it to Redis.
 | REDIS_DB | Redis database number | 0 |
 | REDIS_STREAM | Redis stream prefix | streamHotdeals |
 | REDIS_STREAM_COUNT | Redis stream count | 1 |
-| REDIS_STREAM_MAX_LENGTH | Maximum number of entries to keep in each Redis stream | 100 |
+| REDIS_STREAM_MAX_LENGTH | Maximum number of entries to keep in each Redis stream | 500 |
 | MEMCACHE_ADDR | Memcached server address | localhost:11211 |
 | CRAWL_INTERVAL_SECONDS | Crawling interval (in seconds) | 60 |
 | FMKOREA_URL | FMKorea crawling URL | http://www.fmkorea.com |
@@ -120,7 +120,7 @@ HotDeal Worker uses Redis Streams for publishing hot deal data:
 
 2. **Stream Trimming**: Automatically manages memory usage with stream trimming
    - Each stream is trimmed after every crawling cycle
-   - Configuration option `REDIS_STREAM_MAX_LENGTH` (default: 100) controls max entries
+   - Configuration option `REDIS_STREAM_MAX_LENGTH` (default: 500) controls max entries
    - Prevents unbounded growth of Redis memory usage
 
 3. **Base64 Encoding**: All messages are Base64 encoded for consistent storage
