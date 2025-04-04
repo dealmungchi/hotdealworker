@@ -12,24 +12,26 @@ import (
 
 // RedisPublisher implements Publisher using Redis pub/sub
 type RedisPublisher struct {
-	client       *redis.Client
-	ctx          context.Context
-	streamPrefix string
-	streamCount  int
+	client          *redis.Client
+	ctx             context.Context
+	streamPrefix    string
+	streamCount     int
+	streamMaxLength int
 }
 
 // NewRedisPublisher creates a new Redis publisher
-func NewRedisPublisher(ctx context.Context, addr string, db int, streamPrefix string, streamCount int) *RedisPublisher {
+func NewRedisPublisher(ctx context.Context, addr string, db int, streamPrefix string, streamCount int, streamMaxLength int) *RedisPublisher {
 	client := redis.NewClient(&redis.Options{
 		Addr: addr,
 		DB:   db,
 	})
 
 	return &RedisPublisher{
-		client:       client,
-		ctx:          ctx,
-		streamPrefix: streamPrefix,
-		streamCount:  streamCount,
+		client:          client,
+		ctx:             ctx,
+		streamPrefix:    streamPrefix,
+		streamCount:     streamCount,
+		streamMaxLength: streamMaxLength,
 	}
 }
 
@@ -50,6 +52,26 @@ func (p *RedisPublisher) Publish(key string, message []byte) error {
 			key: encodedMessage,
 		},
 	}).Err()
+}
+
+// TrimStreams trims all streams to the configured maximum length
+func (p *RedisPublisher) TrimStreams() error {
+	// Get all streams with the prefix
+	pattern := p.streamPrefix + ":*"
+	streams, err := p.client.Keys(p.ctx, pattern).Result()
+	if err != nil {
+		return err
+	}
+
+	// Trim each stream
+	for _, stream := range streams {
+		err := p.client.XTrimMaxLen(p.ctx, stream, int64(p.streamMaxLength)).Err()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Close closes the Redis connection

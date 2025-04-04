@@ -9,10 +9,11 @@ import (
 // Config represents the application configuration
 type Config struct {
 	// Redis configuration
-	RedisAddr        string
-	RedisDB          int
-	RedisStream      string
-	RedisStreamCount int
+	RedisAddr            string
+	RedisDB              int
+	RedisStream          string
+	RedisStreamCount     int
+	RedisStreamMaxLength int
 
 	// Memcache configuration
 	MemcacheAddr string
@@ -40,11 +41,13 @@ func LoadConfig() Config {
 	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
 	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "60"))
 	redisStreamCount, _ := strconv.Atoi(getEnv("REDIS_STREAM_COUNT", "1"))
+	redisStreamMaxLength, _ := strconv.Atoi(getEnv("REDIS_STREAM_MAX_LENGTH", "100"))
 	return Config{
-		RedisAddr:        getEnv("REDIS_ADDR", "localhost:6379"),
-		RedisDB:          redisDB,
-		RedisStream:      getEnv("REDIS_STREAM", "streamHotdeals"),
-		RedisStreamCount: redisStreamCount,
+		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
+		RedisDB:              redisDB,
+		RedisStream:          getEnv("REDIS_STREAM", "streamHotdeals"),
+		RedisStreamCount:     redisStreamCount,
+		RedisStreamMaxLength: redisStreamMaxLength,
 		MemcacheAddr:     getEnv("MEMCACHE_ADDR", "localhost:11211"),
 		CrawlInterval:    time.Duration(crawlInterval) * time.Second,
 		FMKoreaURL:       getEnv("FMKOREA_URL", "http://www.fmkorea.com"),

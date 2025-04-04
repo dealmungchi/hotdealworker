@@ -256,7 +256,7 @@ func TestIntegration(t *testing.T) {
 	testCrawler := NewTestCrawler(server, mockCache)
 
 	// Create a Redis publisher pointing to the same Redis instance we're subscribing to
-	redisPublisher := publisher.NewRedisPublisher(ctx, redisAddr, 0, "test_stream_i", 1)
+	redisPublisher := publisher.NewRedisPublisher(ctx, redisAddr, 0, "test_stream_i", 1, 100)
 	defer redisPublisher.Close()
 
 	// Set a longer timeout for potentially slow test environments

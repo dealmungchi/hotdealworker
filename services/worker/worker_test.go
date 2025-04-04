@@ -67,6 +67,10 @@ func (m *MockPublisher) Publish(key string, message []byte) error {
 	return nil
 }
 
+func (m *MockPublisher) TrimStreams() error {
+	return nil
+}
+
 func (m *MockPublisher) Close() error {
 	return nil
 }

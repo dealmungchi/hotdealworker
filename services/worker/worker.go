@@ -52,7 +52,7 @@ func (w *Worker) Start() {
 	}
 }
 
-// runCrawlers runs all the crawlers in parallel
+// runCrawlers runs all the crawlers in parallel and then trims the streams
 func (w *Worker) runCrawlers() {
 	var wg sync.WaitGroup
 	for _, c := range w.crawlers {
@@ -63,6 +63,11 @@ func (w *Worker) runCrawlers() {
 		}(c)
 	}
 	wg.Wait()
+	
+	// Trim all streams after crawling
+	if err := w.publisher.TrimStreams(); err != nil {
+		w.logger.LogError("StreamTrimming", err)
+	}
 }
 
 // crawlAndPublish crawls deals from a crawler and publishes them

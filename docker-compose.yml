@@ -8,10 +8,12 @@ services:
       - redis
       - memcached
     environment:
-      - HOTDEAL_ENVIONMENT=production
+      - HOTDEAL_ENVIRONMENT=production
       - REDIS_ADDR=redis:6379
       - REDIS_DB=0
+      - REDIS_STREAM=streamHotdeals
       - REDIS_STREAM_COUNT=1
+      - REDIS_STREAM_MAX_LENGTH=100
       - MEMCACHE_ADDR=memcached:11211
       - CRAWL_INTERVAL_SECONDS=60
     volumes:

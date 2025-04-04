@@ -32,6 +32,7 @@ func main() {
 		cfg.RedisDB,
 		cfg.RedisStream,
 		cfg.RedisStreamCount,
+		cfg.RedisStreamMaxLength,
 	)
 	defer redisPublisher.Close()
 
