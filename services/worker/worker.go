@@ -63,7 +63,7 @@ func (w *Worker) runCrawlers() {
 		}(c)
 	}
 	wg.Wait()
-	
+
 	// Trim all streams after crawling
 	if err := w.publisher.TrimStreams(); err != nil {
 		w.logger.LogError("StreamTrimming", err)
@@ -83,8 +83,8 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 		return
 	}
 
-	if len(deals) > 0 {
-		dealData, err := json.Marshal(deals)
+	for _, deal := range deals {
+		dealData, err := json.Marshal(deal)
 		if err != nil {
 			w.logger.LogError(crawlerName, err)
 			return
