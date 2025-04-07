@@ -13,7 +13,7 @@ func NewPpomCrawler(cfg config.Config, cacheSvc cache.CacheService) *Configurabl
 		URL:       cfg.PpomURL + "/zboard/zboard.php?id=ppomppu",
 		CacheKey:  "ppom_rate_limited",
 		BlockTime: 500,
-		BaseURL:   cfg.PpomURL,
+		BaseURL:   cfg.PpomURL + "/zboard/",
 		Provider:  "Ppom",
 		Selectors: Selectors{
 			DealList:   "tr.baseList.bbs_new1",
