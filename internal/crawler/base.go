@@ -168,30 +168,31 @@ func (c *BaseCrawler) ExtractPrice(title string) (string, string) {
 }
 
 // ProcessImage fetches an image and converts it to base64
-func (c *BaseCrawler) ProcessImage(imageURL string) (string, error) {
+func (c *BaseCrawler) ProcessImage(imageURL string) (string, string, error) {
 	imageURL = c.ResolveURL(imageURL)
 	if imageURL == "" {
-		return "", nil
+		return "", "", nil
 	}
 
 	data, err := helpers.FetchSimply(imageURL)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return base64.StdEncoding.EncodeToString(data), nil
+	return base64.StdEncoding.EncodeToString(data), imageURL, nil
 }
 
 // CreateDeal creates a HotDeal with the given properties
-func (c *BaseCrawler) CreateDeal(id, title, link, price, thumbnail, postedAt string) *HotDeal {
+func (c *BaseCrawler) CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt string) *HotDeal {
 	return &HotDeal{
-		Id:        id,
-		Title:     title,
-		Link:      link,
-		Price:     price,
-		Thumbnail: thumbnail,
-		PostedAt:  postedAt,
-		Provider:  c.Provider,
+		Id:            id,
+		Title:         title,
+		Link:          link,
+		Price:         price,
+		Thumbnail:     thumbnail,
+		ThumbnailLink: thumbnailLink,
+		PostedAt:      postedAt,
+		Provider:      c.Provider,
 	}
 }
 

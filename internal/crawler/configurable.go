@@ -160,22 +160,21 @@ func (c *ConfigurableCrawler) processDeal(s *goquery.Selection) (*HotDeal, error
 	}
 
 	// Extract thumbnail
-	var thumbnail string
+	var thumbnail, thumbnailLink string
 	if c.Selectors.Thumbnail != "" {
 		thumbSel := s.Find(c.Selectors.Thumbnail)
 		if thumbSel.Length() > 0 {
 			if src, exists := thumbSel.Attr("src"); exists {
-				thumbnail, _ = c.ProcessImage(src)
+				thumbnail, thumbnailLink, _ = c.ProcessImage(src)
 			} else if style, exists := thumbSel.Attr("style"); exists && c.Selectors.ThumbRegex != "" {
 				thumbURL := c.ExtractURLFromStyle(style)
-				thumbnail, _ = c.ProcessImage(thumbURL)
+				thumbnail, thumbnailLink, _ = c.ProcessImage(thumbURL)
 			}
 		}
 	}
 
 	// Extract posted time
-	var postedAt string
-	postedAt = c.processElement(s, "postedAt", c.Selectors.PostedAt)
+	postedAt := c.processElement(s, "postedAt", c.Selectors.PostedAt)
 
-	return c.CreateDeal(id, title, link, price, thumbnail, postedAt), nil
+	return c.CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt), nil
 }

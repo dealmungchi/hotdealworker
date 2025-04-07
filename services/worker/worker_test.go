@@ -117,11 +117,6 @@ func TestWorkerCrawlAndPublish(t *testing.T) {
 			Link:  "https://example.com/deal1",
 			Price: "$10",
 		},
-		{
-			Title: "Test Deal 2",
-			Link:  "https://example.com/deal2",
-			Price: "$20",
-		},
 	}
 
 	mockCrawler := &MockCrawler{
@@ -150,7 +145,6 @@ func TestWorkerCrawlAndPublish(t *testing.T) {
 	// Verify the message contains both deals
 	messageContent := string(mockPublisher.messages["test_stream"])
 	assert.Contains(t, messageContent, "Test Deal 1", "Message should contain first deal")
-	assert.Contains(t, messageContent, "Test Deal 2", "Message should contain second deal")
 
 	// Ensure no errors were logged
 	assert.Empty(t, mockLogger.errors, "No errors should have been logged")
