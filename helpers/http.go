@@ -2,8 +2,6 @@ package helpers
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"io"
 	mathrand "math/rand"
@@ -32,15 +30,6 @@ var (
 		Timeout: 10 * time.Second,
 	}
 )
-
-// GenerateRandomCookie generates a cryptographically secure 32-character hex string
-func GenerateRandomCookie() (string, error) {
-	b := make([]byte, 16) // 16 bytes -> 32 chars when hex encoded
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
 
 func FetchSimply(url string) ([]byte, error) {
 	resp, err := client.Get(url)
@@ -87,13 +76,6 @@ func FetchWithRandomHeaders(url string) (io.Reader, error) {
 	req.Header.Set("Sec-Fetch-Mode", "navigate")
 	req.Header.Set("Sec-Fetch-Site", "cross-site")
 	req.Header.Set("Sec-Fetch-User", "?1")
-
-	// Generate and set a random cookie
-	cookieValue, err := GenerateRandomCookie()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate cookie: %w", err)
-	}
-	req.Header.Set("Cookie", "idntm5="+cookieValue)
 
 	// Send the request
 	resp, err := client.Do(req)

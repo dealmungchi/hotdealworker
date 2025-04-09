@@ -19,7 +19,7 @@ func NewFMKoreaCrawler(cfg config.Config, cacheSvc cache.CacheService) *Configur
 		// FMKorea crawler configuration
 		URL:       cfg.FMKoreaURL + "/hotdeal",
 		CacheKey:  "fmkorea_rate_limited",
-		BlockTime: 500,
+		BlockTime: 300,
 		BaseURL:   cfg.FMKoreaURL,
 		Provider:  "FMKorea",
 		Selectors: Selectors{

@@ -9,19 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateRandomCookie(t *testing.T) {
-	cookie1, err := GenerateRandomCookie()
-	assert.NoError(t, err)
-	assert.Len(t, cookie1, 32) // 16 bytes = 32 hex chars
-
-	cookie2, err := GenerateRandomCookie()
-	assert.NoError(t, err)
-	assert.Len(t, cookie2, 32)
-
-	// Cookies should be different
-	assert.NotEqual(t, cookie1, cookie2)
-}
-
 func TestFetchWithRandomHeaders(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
