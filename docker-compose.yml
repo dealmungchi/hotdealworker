@@ -37,17 +37,39 @@ services:
       - "11211:11211"
 
   chromedb:
-    image: browserless/chrome:latest
+    image: browserless/chrome:1.60.0-chrome-stable
     restart: always
     ports:
       - "3000:3000"
     environment:
-      - CONNECTION_TIMEOUT=60000
-      - MAX_CONCURRENT_SESSIONS=10
+      - CONNECTION_TIMEOUT=120000
+      - MAX_CONCURRENT_SESSIONS=3
+      - BROWSER_TIMEOUT_MS=180000
+      - DEFAULT_BLOCK_ADS=true
       - ENABLE_CORS=true
+      - FUNCTION_ENABLE_INCOGNITO_MODE=true
+      - ENABLE_HEAP_DUMP=false
+      - CHROME_REFRESH_TIME=300000
+      - KEEP_ALIVE=true
+      - WORKSPACE_DELETE_EXPIRED=true
+      - WORKSPACE_EXPIRE_DAYS=1
+      - DEFAULT_USER_DATA_DIR=/tmp/chromedb-cache
+      - DEFAULT_LAUNCH_ARGS=--disable-gpu,--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-accelerated-2d-canvas,--no-first-run,--no-zygote,--single-process,--disable-features=site-per-process
       - TOKEN=  # 필요시 설정
     volumes:
       - chrome-data:/tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+        reservations:
+          memory: 1G
 
 volumes:
   redis-data:

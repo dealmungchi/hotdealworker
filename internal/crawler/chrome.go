@@ -44,7 +44,7 @@ func NewChromeDBCrawler(config CrawlerConfig, cacheSvc cache.CacheService, chrom
 		UseChrome:           true,
 		ChromeAddr:          chromeAddr,
 	}
-	
+
 	// Check ChromeDB connection on initialization
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(chromeAddr)
@@ -55,11 +55,11 @@ func NewChromeDBCrawler(config CrawlerConfig, cacheSvc cache.CacheService, chrom
 		fmt.Printf("ChromeDB connection successful: %s, status: %d\n", chromeAddr, resp.StatusCode)
 		resp.Body.Close()
 	}
-	
+
 	return chromeDBCrawler
 }
 
-// fetchWithChromeDB fetches a URL using ChromeDB
+// fetchWithChromeDB fetches a URL using ChromeDB - optimized for FMKorea
 func (c *ChromeDBCrawler) fetchWithChromeDB() (io.Reader, error) {
 	// Check if the crawler is rate limited
 	if c.CacheSvc != nil && c.CacheKey != "" {
@@ -68,298 +68,162 @@ func (c *ChromeDBCrawler) fetchWithChromeDB() (io.Reader, error) {
 			return nil, fmt.Errorf("%s: %d초 동안 더 이상 요청을 보내지 않음", c.CacheKey, c.BlockTime/time.Second)
 		}
 	}
-	
+
 	fmt.Printf("DEBUG: Fetching URL with ChromeDB: %s\n", c.URL)
-	
-	// Try direct HTTP request first as a fallback
-	fmt.Printf("DEBUG: Trying direct HTTP request first to %s\n", c.URL)
-	httpClient := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest("GET", c.URL, nil)
-	if err == nil {
-		// Add browser-like headers to avoid blocking
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-		resp, err := httpClient.Do(req)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			defer resp.Body.Close()
-			bodyBytes, err := io.ReadAll(resp.Body)
-			if err == nil && len(bodyBytes) > 0 && (strings.Contains(string(bodyBytes), "<html") || strings.Contains(string(bodyBytes), "<body")) {
-				fmt.Printf("DEBUG: Direct HTTP request successful, got %d bytes\n", len(bodyBytes))
-				return bytes.NewReader(bodyBytes), nil
-			}
-		}
-	}
-	
-	// Try a simpler function for better compatibility
-	fmt.Printf("DEBUG: Trying simplified function approach\n")
-	
-	simplePayload := map[string]interface{}{
-		"code": `module.exports = async ({ page, context }) => {
-			await page.setViewport({ width: 1280, height: 800 });
-			await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-			
-			try {
-				await page.goto(context.url, { timeout: 30000 });
-				await page.waitForTimeout(2000); // Wait a bit for dynamic content
-				return await page.content();
-			} catch (e) {
-				console.error('Error loading page:', e);
-				return '<html><body>Error: ' + e.message + '</body></html>';
-			}
-		}`,
-		"context": map[string]interface{}{
-			"url": c.URL,
+
+	// FMKorea needs ChromeDB, direct HTTP requests will be rate limited
+	httpClient := &http.Client{Timeout: 60 * time.Second}
+
+	// Try evaluate endpoint first - most reliable for getting HTML content
+	evalPayload := map[string]interface{}{
+		"url": c.URL,
+		"gotoOptions": map[string]interface{}{
+			"waitUntil": "domcontentloaded",
+			"timeout":   10000,
 		},
+		"evaluate": "document.documentElement.outerHTML",
 	}
-	
-	simpleData, _ := json.Marshal(simplePayload)
-	simpleReq, _ := http.NewRequest("POST", c.ChromeAddr+"/function", bytes.NewBuffer(simpleData))
-	simpleReq.Header.Set("Content-Type", "application/json")
-	
-	simpleResp, err := httpClient.Do(simpleReq)
-	if err == nil && simpleResp.StatusCode == http.StatusOK {
-		defer simpleResp.Body.Close()
-		
-		simpleBytes, err := io.ReadAll(simpleResp.Body)
-		if err == nil && len(simpleBytes) > 0 {
-			simpleContent := string(simpleBytes)
-			
-			// Check if it's JSON response
-			if strings.HasPrefix(strings.TrimSpace(simpleContent), "{") {
+
+	evalData, _ := json.Marshal(evalPayload)
+	evalReq, err := http.NewRequest("POST", c.ChromeAddr+"/evaluate", bytes.NewBuffer(evalData))
+	if err == nil {
+		evalReq.Header.Set("Content-Type", "application/json")
+
+		evalResp, evalErr := httpClient.Do(evalReq)
+		if evalErr == nil && evalResp.StatusCode == http.StatusOK {
+			defer evalResp.Body.Close()
+			evalBytes, _ := io.ReadAll(evalResp.Body)
+
+			if len(evalBytes) > 0 {
+				fmt.Printf("DEBUG: Eval endpoint successful, got %d bytes\n", len(evalBytes))
 				var result map[string]interface{}
-				if json.Unmarshal(simpleBytes, &result) == nil {
+				if err := json.Unmarshal(evalBytes, &result); err == nil {
 					if data, ok := result["data"].(string); ok && len(data) > 0 {
-						simpleContent = data
-					} else if data, ok := result["result"].(string); ok && len(data) > 0 {
-						simpleContent = data
+						fmt.Printf("DEBUG: Found HTML in evaluate result\n")
+						return strings.NewReader(data), nil
 					}
 				}
-			}
-			
-			if strings.Contains(simpleContent, "<html") || strings.Contains(simpleContent, "<body") {
-				fmt.Printf("DEBUG: Simple function approach succeeded, got %d bytes\n", len(simpleContent))
-				return strings.NewReader(simpleContent), nil
+				// If we couldn't extract HTML from JSON, return raw content
+				return bytes.NewReader(evalBytes), nil
 			}
 		}
 	}
-	
-	if simpleResp != nil {
-		simpleResp.Body.Close()
+
+	// If evaluate endpoint failed, try content endpoint
+	contentPayload := map[string]interface{}{
+		"url": c.URL,
+		"gotoOptions": map[string]interface{}{
+			"waitUntil": "domcontentloaded",
+			"timeout":   45000,
+		},
 	}
-	
-	// If everything fails, try with a more complex approach
-	fmt.Printf("DEBUG: Trying function endpoint with more complex settings\n")
-	
-	functionPayload := map[string]interface{}{
+
+	contentData, _ := json.Marshal(contentPayload)
+	contentReq, err := http.NewRequest("POST", c.ChromeAddr+"/content", bytes.NewBuffer(contentData))
+	if err == nil {
+		contentReq.Header.Set("Content-Type", "application/json")
+
+		contentResp, contentErr := httpClient.Do(contentReq)
+		if contentErr == nil && contentResp.StatusCode == http.StatusOK {
+			defer contentResp.Body.Close()
+			contentBytes, _ := io.ReadAll(contentResp.Body)
+
+			if len(contentBytes) > 0 {
+				fmt.Printf("DEBUG: Content endpoint successful, got %d bytes\n", len(contentBytes))
+				return bytes.NewReader(contentBytes), nil
+			}
+		}
+	}
+
+	// If all direct endpoints failed, try custom function
+	funcPayload := map[string]interface{}{
 		"code": `
 		module.exports = async ({ page, context }) => {
-			// Configure the browser for better compatibility
-			await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-			await page.setExtraHTTPHeaders({
-				'Accept-Language': 'en-US,en;q=0.9,ko;q=0.8',
-				'Referer': 'https://google.com/'
-			});
-			
-			// Enable JavaScript
-			await page.setJavaScriptEnabled(true);
-			
-			const url = context.url;
-			console.log('Navigating to:', url);
-			
 			try {
-				// Try to navigate with longer timeout and different wait options
-				const response = await page.goto(url, { 
-					waitUntil: 'domcontentloaded', // Try with domcontentloaded instead of networkidle2
-					timeout: 45000 
+				console.log("Using direct HTML extraction method");
+				
+				// Set up basic browser configuration
+				await page.setViewport({ width: 1280, height: 800 });
+				await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+				await page.setExtraHTTPHeaders({
+					'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+					'Referer': 'https://google.co.kr/',
+					'Cache-Control': 'no-cache',
+					'Pragma': 'no-cache',
+					'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
+					'Sec-Ch-Ua-Mobile': '?0',
+					'Sec-Ch-Ua-Platform': '"Windows"',
 				});
 				
-				if (!response) {
-					throw new Error('Failed to get response from page');
-				}
+				// Navigate to the URL
+				await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+				await page.waitForTimeout(5000);
 				
-				console.log('Page loaded with status:', response.status());
+				// Scroll to trigger lazy loading
+				await page.evaluate(() => window.scrollBy(0, 500));
+				await page.waitForTimeout(2000);
 				
-				if (response.status() >= 400) {
-					throw new Error('Page returned error status: ' + response.status());
-				}
+				// Get HTML directly using DOM API 
+				const html = await page.evaluate(() => document.documentElement.outerHTML);
+				console.log("HTML length from evaluate:", html.length);
 				
-				// Wait for any key content to load
-				await page.waitForTimeout(3000);
-				
-				// Take a screenshot for debugging
-				await page.screenshot({path: '/tmp/debug.png'});
-				
-				// Get the page content
-				const content = await page.content();
-				
-				if (!content || content.length === 0) {
-					throw new Error('Page content is empty');
-				}
-				
-				console.log('Content length:', content.length);
-				
-				// Return a structured result
-				return {
-					success: true,
-					content: content,
-					url: page.url(), // The final URL after redirects
-					status: response.status()
-				};
-			} catch (error) {
-				console.error('Navigation error:', error.message);
-				
-				// Try to get any content that loaded before the error
-				try {
-					const content = await page.content();
-					return {
-						success: false,
-						error: error.message,
-						content: content,
-						url: page.url()
-					};
-				} catch (contentError) {
-					return {
-						success: false,
-						error: error.message + ' (content error: ' + contentError.message + ')'
-					};
-				}
+				// Return the HTML as a string, not wrapped in an object
+				return html;
+			} catch (e) {
+				console.error("Error:", e);
+				return "<html><body>Error: " + e.message + "</body></html>";
 			}
 		}`,
 		"context": map[string]interface{}{
 			"url": c.URL,
 		},
 	}
-	
-	// Convert payload to JSON
-	functionData, err := json.Marshal(functionPayload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal function payload: %w", err)
-	}
-	
-	// Create request to ChromeDB with longer timeout
-	client := &http.Client{Timeout: 90 * time.Second}
-	functionReq, err := http.NewRequest("POST", c.ChromeAddr+"/function", bytes.NewBuffer(functionData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create function request: %w", err)
-	}
-	
-	functionReq.Header.Set("Content-Type", "application/json")
-	
-	// Send request to ChromeDB
-	functionResp, functionErr := client.Do(functionReq)
-	
-	if functionErr != nil {
-		// If request fails, set rate limiting cache
-		if c.CacheSvc != nil && c.CacheKey != "" {
-			if setErr := c.CacheSvc.Set(c.CacheKey, []byte(fmt.Sprintf("%d", c.BlockTime/time.Second)), c.BlockTime); setErr != nil {
-				return nil, fmt.Errorf("failed to set rate limit cache: %w, original error: %w", setErr, functionErr)
-			}
-		}
-		return nil, fmt.Errorf("failed to fetch from ChromeDB function: %w", functionErr)
-	}
-	
-	defer functionResp.Body.Close()
-	
-	fmt.Printf("DEBUG: Function endpoint response status: %d\n", functionResp.StatusCode)
-	
-	// Check response status
-	if functionResp.StatusCode != http.StatusOK {
-		// Set rate limiting cache on error
-		if c.CacheSvc != nil && c.CacheKey != "" {
-			if setErr := c.CacheSvc.Set(c.CacheKey, []byte(fmt.Sprintf("%d", c.BlockTime/time.Second)), c.BlockTime); setErr != nil {
-				return nil, setErr
-			}
-		}
-		return nil, fmt.Errorf("ChromeDB function endpoint returned non-OK status: %d", functionResp.StatusCode)
-	}
-	
-	// Read response body
-	bodyBytes, err := io.ReadAll(functionResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read ChromeDB function response: %w", err)
-	}
-	
-	fmt.Printf("DEBUG: Received %d bytes from /function endpoint\n", len(bodyBytes))
-	
-	// If we received no data or empty data, set rate limiting and fail
-	if len(bodyBytes) == 0 {
-		if c.CacheSvc != nil && c.CacheKey != "" {
-			if setErr := c.CacheSvc.Set(c.CacheKey, []byte(fmt.Sprintf("%d", c.BlockTime/time.Second)), c.BlockTime); setErr != nil {
-				fmt.Printf("DEBUG: Failed to set rate limit cache: %v\n", setErr)
-			}
-		}
-		return nil, fmt.Errorf("empty response from ChromeDB function endpoint (0 bytes)")
-	}
-	
-	// Format depends on endpoint, may be direct HTML or JSON with result field
-	content := string(bodyBytes)
-	
-	// If it's JSON, try to extract the HTML content from various fields
-	if strings.HasPrefix(strings.TrimSpace(content), "{") {
-		fmt.Printf("DEBUG: Response appears to be JSON\n")
-		var result map[string]interface{}
-		if err := json.Unmarshal(bodyBytes, &result); err == nil {
-			// Log the structure for debugging
-			keys := []string{}
-			for k := range result {
-				keys = append(keys, k)
-			}
-			fmt.Printf("DEBUG: JSON response has keys: %v\n", keys)
-			
-			// Try various possible field names for HTML content
-			if data, ok := result["data"].(map[string]interface{}); ok {
-				// If data is an object, look for content field
-				if htmlContent, ok := data["content"].(string); ok && len(htmlContent) > 0 {
-					fmt.Printf("DEBUG: Found HTML content in 'data.content' field (%d bytes)\n", len(htmlContent))
-					content = htmlContent
-				}
-			} else if htmlContent, ok := result["content"].(string); ok && len(htmlContent) > 0 {
-				fmt.Printf("DEBUG: Found HTML content in 'content' field (%d bytes)\n", len(htmlContent))
-				content = htmlContent
-			} else if htmlContent, ok := result["data"].(string); ok && len(htmlContent) > 0 {
-				fmt.Printf("DEBUG: Found HTML content in 'data' field (%d bytes)\n", len(htmlContent))
-				content = htmlContent
-			} else if htmlContent, ok := result["result"].(string); ok && len(htmlContent) > 0 {
-				fmt.Printf("DEBUG: Found HTML content in 'result' field (%d bytes)\n", len(htmlContent))
-				content = htmlContent
-			} else if htmlContent, ok := result["html"].(string); ok && len(htmlContent) > 0 {
-				fmt.Printf("DEBUG: Found HTML content in 'html' field (%d bytes)\n", len(htmlContent))
-				content = htmlContent
-			} else {
-				fmt.Printf("DEBUG: Could not find HTML content in JSON response structure\n")
-			}
-		} else {
-			fmt.Printf("DEBUG: Failed to parse JSON: %v\n", err)
+
+	funcData, _ := json.Marshal(funcPayload)
+	funcReq, _ := http.NewRequest("POST", c.ChromeAddr+"/function", bytes.NewBuffer(funcData))
+	funcReq.Header.Set("Content-Type", "application/json")
+
+	funcResp, funcErr := httpClient.Do(funcReq)
+	if funcErr == nil && funcResp.StatusCode == http.StatusOK {
+		defer funcResp.Body.Close()
+		funcBytes, _ := io.ReadAll(funcResp.Body)
+
+		if len(funcBytes) > 0 {
+			fmt.Printf("DEBUG: Function endpoint returned %d bytes\n", len(funcBytes))
+			return bytes.NewReader(funcBytes), nil
 		}
 	}
-	
-	// Final validation with better diagnostics
-	if !strings.Contains(content, "<html") && !strings.Contains(content, "<body") {
-		// Log a snippet of what we did receive to diagnose the issue
-		contentPreview := content
-		if len(contentPreview) > 200 {
-			contentPreview = contentPreview[:200] + "..."
+
+	// Final fallback - try direct scrape
+	scrapeURL := fmt.Sprintf("%s/scrape?url=%s", c.ChromeAddr, c.URL)
+	scrapeReq, _ := http.NewRequest("GET", scrapeURL, nil)
+
+	scrapeResp, scrapeErr := httpClient.Do(scrapeReq)
+	if scrapeErr == nil && scrapeResp.StatusCode == http.StatusOK {
+		defer scrapeResp.Body.Close()
+		scrapeBytes, _ := io.ReadAll(scrapeResp.Body)
+
+		if len(scrapeBytes) > 0 {
+			fmt.Printf("DEBUG: Scrape endpoint returned %d bytes\n", len(scrapeBytes))
+			return bytes.NewReader(scrapeBytes), nil
 		}
-		fmt.Printf("DEBUG: Received non-HTML response: %s\n", contentPreview)
-		
-		// Set rate limiting cache on error
-		if c.CacheSvc != nil && c.CacheKey != "" {
-			if setErr := c.CacheSvc.Set(c.CacheKey, []byte(fmt.Sprintf("%d", c.BlockTime/time.Second)), c.BlockTime); setErr != nil {
-				fmt.Printf("DEBUG: Failed to set rate limit cache: %v\n", setErr)
-			}
-		}
-		
-		return nil, fmt.Errorf("invalid or empty HTML response from ChromeDB (received %d bytes)", len(content))
 	}
-	
-	fmt.Printf("DEBUG: Successfully received HTML content (%d bytes)\n", len(content))
-	return strings.NewReader(content), nil
+
+	// If all attempts failed
+	if c.CacheSvc != nil && c.CacheKey != "" {
+		shortBlockTime := 30 * time.Second
+		if setErr := c.CacheSvc.Set(c.CacheKey, []byte("30"), shortBlockTime); setErr != nil {
+			fmt.Printf("DEBUG: Failed to set rate limit cache: %v\n", setErr)
+		}
+	}
+
+	return nil, fmt.Errorf("all fetch attempts failed")
 }
 
 // FetchDeals fetches deals using ChromeDB
 func (c *ChromeDBCrawler) FetchDeals() ([]HotDeal, error) {
 	fmt.Printf("DEBUG: Starting ChromeDBCrawler.FetchDeals() for %s\n", c.Provider)
-	
+
 	// Fetch the page with ChromeDB
 	var utf8Body io.Reader
 	var err error

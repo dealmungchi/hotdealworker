@@ -21,11 +21,10 @@ func createConfigurableCrawlers(cfg config.Config, cacheSvc cache.CacheService) 
 	// Add each crawler
 	crawlers = append(crawlers, NewClienCrawler(cfg, cacheSvc))
 	crawlers = append(crawlers, NewRuliwebCrawler(cfg, cacheSvc))
-	
-	// Use ChromeDB for FMKorea if configured
+
+	// FMKorea는 rate limiting 문제로 ChromeDB 사용
 	if cfg.UseChromeDB {
-		// Create an FMKorea crawler with ChromeDB
-		fmConfig := CrawlerConfig{
+		fmkoreaConfig := CrawlerConfig{
 			URL:       cfg.FMKoreaURL + "/hotdeal",
 			CacheKey:  "fmkorea_rate_limited",
 			BlockTime: 300,
@@ -48,11 +47,37 @@ func createConfigurableCrawlers(cfg config.Config, cacheSvc cache.CacheService) 
 				return helpers.GetSplitPart(link, "/", 3)
 			},
 		}
-		crawlers = append(crawlers, NewChromeDBCrawler(fmConfig, cacheSvc, cfg.ChromeDBAddr))
+		crawlers = append(crawlers, NewChromeDBCrawler(fmkoreaConfig, cacheSvc, cfg.ChromeDBAddr))
 	} else {
 		crawlers = append(crawlers, NewFMKoreaCrawler(cfg, cacheSvc))
 	}
-	
+
+	// 다른 사이트에 ChromeDB 필요시 아래 코드 참고
+	/*
+		if cfg.UseChromeDB {
+			// Create a crawler with ChromeDB
+			siteConfig := CrawlerConfig{
+				URL:       "your_url_here",
+				CacheKey:  "site_rate_limited",
+				BlockTime: 300,
+				BaseURL:   "base_url_here",
+				Provider:  "SiteName",
+				Selectors: Selectors{
+					DealList:   "selector_for_deals",
+					Title:      "selector_for_title",
+					Link:       "selector_for_link",
+					Thumbnail:  "selector_for_thumbnail",
+					PostedAt:   "selector_for_posted_time",
+					PriceRegex: `your_regex_here`,
+				},
+				IDExtractor: func(link string) (string, error) {
+					return helpers.GetSplitPart(link, "/", 3)
+				},
+			}
+			crawlers = append(crawlers, NewChromeDBCrawler(siteConfig, cacheSvc, cfg.ChromeDBAddr))
+		}
+	*/
+
 	crawlers = append(crawlers, NewPpomCrawler(cfg, cacheSvc))
 	crawlers = append(crawlers, NewPpomEnCrawler(cfg, cacheSvc))
 	crawlers = append(crawlers, NewQuasarCrawler(cfg, cacheSvc))
