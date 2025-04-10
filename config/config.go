@@ -21,6 +21,10 @@ type Config struct {
 	// Crawler configuration
 	CrawlInterval time.Duration
 
+	// ChromeDB configuration
+	ChromeDBAddr string
+	UseChromeDB  bool
+
 	// URLs for different crawlers
 	FMKoreaURL    string
 	DamoangURL    string
@@ -42,6 +46,8 @@ func LoadConfig() Config {
 	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "20"))
 	redisStreamCount, _ := strconv.Atoi(getEnv("REDIS_STREAM_COUNT", "1"))
 	redisStreamMaxLength, _ := strconv.Atoi(getEnv("REDIS_STREAM_MAX_LENGTH", "500"))
+	useChromeDB, _ := strconv.ParseBool(getEnv("USE_CHROME_DB", "true"))
+
 	return Config{
 		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisDB:              redisDB,
@@ -50,6 +56,8 @@ func LoadConfig() Config {
 		RedisStreamMaxLength: redisStreamMaxLength,
 		MemcacheAddr:         getEnv("MEMCACHE_ADDR", "localhost:11211"),
 		CrawlInterval:        time.Duration(crawlInterval) * time.Second,
+		ChromeDBAddr:         getEnv("CHROME_DB_ADDR", "http://localhost:3000"),
+		UseChromeDB:          useChromeDB,
 		FMKoreaURL:           getEnv("FMKOREA_URL", "http://www.fmkorea.com"),
 		DamoangURL:           getEnv("DAMOANG_URL", "https://damoang.net"),
 		ArcaURL:              getEnv("ARCA_URL", "https://arca.live"),

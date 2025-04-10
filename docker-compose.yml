@@ -7,6 +7,7 @@ services:
     depends_on:
       - redis
       - memcached
+      - chromedb
     environment:
       - HOTDEAL_ENVIRONMENT=production
       - REDIS_ADDR=redis:6379
@@ -16,6 +17,8 @@ services:
       - REDIS_STREAM_MAX_LENGTH=500
       - MEMCACHE_ADDR=memcached:11211
       - CRAWL_INTERVAL_SECONDS=60
+      - USE_CHROME_DB=true
+      - CHROME_DB_ADDR=http://chromedb:3000
     volumes:
       - ./error:/app/error
 
@@ -33,5 +36,19 @@ services:
     ports:
       - "11211:11211"
 
+  chromedb:
+    image: browserless/chrome:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - CONNECTION_TIMEOUT=60000
+      - MAX_CONCURRENT_SESSIONS=10
+      - ENABLE_CORS=true
+      - TOKEN=  # 필요시 설정
+    volumes:
+      - chrome-data:/tmp
+
 volumes:
   redis-data:
+  chrome-data:

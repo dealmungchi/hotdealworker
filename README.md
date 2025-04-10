@@ -8,7 +8,8 @@ A worker program that crawls hot deal information and publishes it to Redis.
 - Rate limiting prevention and handling (using Memcached)  
 - JSON to Base64-encoded message publishing (Redis pub/sub)  
 - Environment variable configuration  
-- Logging and error handling  
+- Logging and error handling
+- Chrome headless browser support for sites requiring JavaScript
 
 ## Supported Sites
 
@@ -33,6 +34,8 @@ A worker program that crawls hot deal information and publishes it to Redis.
 | REDIS_STREAM_MAX_LENGTH | Maximum number of entries to keep in each Redis stream | 500 |
 | MEMCACHE_ADDR | Memcached server address | localhost:11211 |
 | CRAWL_INTERVAL_SECONDS | Crawling interval (in seconds) | 60 |
+| USE_CHROME_DB | Use Chrome headless browser for sites that need JavaScript | false |
+| CHROME_DB_ADDR | ChromeDB service address | http://localhost:3000 |
 | FMKOREA_URL | FMKorea crawling URL | http://www.fmkorea.com |
 | DAMOANG_URL | Damoang crawling URL | https://damoang.net |
 | ARCA_URL | Arca Live crawling URL | https://arca.live |
@@ -143,10 +146,17 @@ HotDeal Worker uses the following crawler architecture:
    - Supports custom handlers and element transformations
    - Reusable modular components  
 
-3. **Site-specific Crawlers**: Handle site-specific needs  
+3. **ChromeDBCrawler**: Headless browser-based crawler
+   - Handles sites requiring JavaScript execution
+   - Uses browserless/chrome to render pages
+   - Processes fully rendered DOM content
+   - Configurable with same selector approach as other crawlers
+
+4. **Site-specific Crawlers**: Handle site-specific needs  
    - Each crawler in its own file for better organization
    - Config-based approach: reuse common logic with only config differences
    - Custom handlers for sites with special extraction requirements
+   - Option to use either standard HTTP or ChromeDB crawling
 
 ### Customization System
 
