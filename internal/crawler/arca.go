@@ -18,12 +18,12 @@ func NewArcaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 		if titleSel.Length() == 0 {
 			return ""
 		}
-		
+
 		// Clone to avoid modifying the original selection
 		cleanTitle := titleSel.Clone()
 		// Remove spans
 		cleanTitle.Find("span").Remove()
-		
+
 		return strings.TrimSpace(cleanTitle.Text())
 	}
 

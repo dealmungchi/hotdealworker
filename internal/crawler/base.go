@@ -62,15 +62,6 @@ func (c *BaseCrawler) fetchWithCache() (io.Reader, error) {
 
 // fetchWithChromeDB fetches a URL using ChromeDB
 func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
-	// Check if the crawler is rate limited
-	if c.CacheSvc != nil && c.CacheKey != "" {
-		_, err := c.CacheSvc.Get(c.CacheKey)
-		if err == nil {
-			return nil, fmt.Errorf("%s: %d초 동안 더 이상 요청을 보내지 않음", c.CacheKey, c.BlockTime/time.Second)
-		}
-	}
-
-	// FMKorea needs ChromeDB, direct HTTP requests will be rate limited
 	httpClient := &http.Client{Timeout: 60 * time.Second}
 
 	// Try evaluate endpoint first - most reliable for getting HTML content
