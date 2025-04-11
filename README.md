@@ -1,29 +1,33 @@
 # HotDeal Worker
 
-A worker program that crawls hot deal information and publishes it to Redis.
+A robust Go application that crawls multiple e-commerce and community websites for hot deals and publishes them to Redis streams in real-time.
 
-## Features
+## Key Features
 
-- Concurrent crawling of multiple hot deal sites  
-- Rate limiting prevention and handling (using Memcached)  
-- JSON to Base64-encoded message publishing (Redis pub/sub)  
-- Environment variable configuration  
-- Logging and error handling
-- Chrome headless browser support for sites requiring JavaScript
+- **Concurrent Multi-site Crawling**: Parallel processing of multiple hot deal sites
+- **Rate Limiting Prevention**: Effective crawling speed control using Memcached
+- **Flexible Crawler Architecture**: Configuration-driven crawlers that reuse common functionality
+- **Headless Browser Support**: Processing for sites requiring JavaScript execution
+- **Redis Stream Publishing**: Scalable real-time data distribution
+- **Memory Optimization**: Automatic stream trimming for efficient memory management
 
 ## Supported Sites
 
-- FMKorea - **in progress**
-- Damoang  
-- Arca Live  
-- Quasar Zone  
-- Coolandjoy  
-- Clien  
-- Ppomppu  
-- Ppomppu English  
-- Ruliweb  
+| Site | Status | URL |
+|------|--------|-----|
+| FMKorea | In Progress | www.fmkorea.com |
+| Damoang | Supported | damoang.net |
+| Arca Live | Supported | arca.live |
+| Quasar Zone | Supported | quasarzone.com |
+| Coolandjoy | Supported | coolenjoy.net |
+| Clien | Supported | www.clien.net |
+| Ppomppu | Supported | www.ppomppu.co.kr |
+| Ppomppu English | Supported | www.ppomppu.co.kr |
+| Ruliweb | Supported | bbs.ruliweb.com |
+| Missycoupons | Supported | www.missycoupons.com |
+| Dealbada | Supported | www.dealbada.com |
 
-## Environments
+## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -31,24 +35,16 @@ A worker program that crawls hot deal information and publishes it to Redis.
 | REDIS_DB | Redis database number | 0 |
 | REDIS_STREAM | Redis stream prefix | streamHotdeals |
 | REDIS_STREAM_COUNT | Redis stream count | 1 |
-| REDIS_STREAM_MAX_LENGTH | Maximum number of entries to keep in each Redis stream | 500 |
+| REDIS_STREAM_MAX_LENGTH | Maximum entries per Redis stream | 500 |
 | MEMCACHE_ADDR | Memcached server address | localhost:11211 |
-| CRAWL_INTERVAL_SECONDS | Crawling interval (in seconds) | 60 |
-| USE_CHROME_DB | Use Chrome headless browser for sites that need JavaScript | false |
+| CRAWL_INTERVAL_SECONDS | Crawling interval in seconds | 60 |
+| USE_CHROME_DB | Enable headless browser for JavaScript sites | false |
 | CHROME_DB_ADDR | ChromeDB service address | http://localhost:3000 |
-| FMKOREA_URL | FMKorea crawling URL | http://www.fmkorea.com |
-| DAMOANG_URL | Damoang crawling URL | https://damoang.net |
-| ARCA_URL | Arca Live crawling URL | https://arca.live |
-| QUASAR_URL | Quasar Zone crawling URL | https://quasarzone.com |
-| COOLANDJOY_URL | Coolandjoy crawling URL | https://coolenjoy.net |
-| CLIEN_URL | Clien crawling URL | https://www.clien.net/service |
-| PPOM_URL | Ppomppu crawling URL | https://www.ppomppu.co.kr |
-| PPOMEN_URL | Ppomppu English crawling URL | https://www.ppomppu.co.kr |
-| RULIWEB_URL | Ruliweb crawling URL | https://bbs.ruliweb.com |
+| *_URL | Site-specific crawling URLs | Default site URLs |
 
-## Installation
+## Installation and Usage
 
-### Basic
+### Basic Setup
 
 ```bash
 # Clone the repository
@@ -65,7 +61,7 @@ go build -o hotdealworker
 ./hotdealworker
 ```
 
-### Docker
+### Docker Deployment
 
 ```bash
 # Run with Docker Compose
@@ -85,13 +81,13 @@ Messages published to Redis are Base64-encoded JSON arrays with the following st
     "price": "Price",
     "thumbnail": "Thumbnail Image (Base64encoded)",
     "posted_at": "Posted DateTime",
-    "provider": "provider"
+    "provider": "Provider"
   },
   ...
 ]
 ```
 
-## Tests
+## Testing
 
 ```bash
 # Run all tests
@@ -104,7 +100,7 @@ make unit-test
 make integration-test
 ```
 
-## Modules
+## Project Structure
 
 - `config/`: Application configuration
 - `services/`: Service layer (cache, publisher, worker)
@@ -117,67 +113,53 @@ make integration-test
 
 HotDeal Worker uses Redis Streams for publishing hot deal data:
 
-1. **Multiple Streams**: Distributes data across multiple Redis Streams for better load balancing
-   - Configuration option `REDIS_STREAM_COUNT` controls number of streams
-   - Messages are randomly assigned to one of these streams
+1. **Multiple Streams**: Distributes data across multiple Redis Streams for improved load balancing
+   - `REDIS_STREAM_COUNT` configuration controls number of streams
+   - Messages are randomly assigned to streams
 
-2. **Stream Trimming**: Automatically manages memory usage with stream trimming
+2. **Stream Trimming**: Automatically manages memory usage
    - Each stream is trimmed after every crawling cycle
-   - Configuration option `REDIS_STREAM_MAX_LENGTH` (default: 500) controls max entries
+   - `REDIS_STREAM_MAX_LENGTH` controls maximum entries per stream
    - Prevents unbounded growth of Redis memory usage
 
 3. **Base64 Encoding**: All messages are Base64 encoded for consistent storage
    - Preserves binary data and special characters
-   - Simplifies message handling and client processing
+   - Simplifies client processing
 
-### Crawler Structure
+### Crawler Architecture
 
-HotDeal Worker uses the following crawler architecture:
+HotDeal Worker implements a modular crawler architecture:
 
-1. **BaseCrawler**: Provides shared functionality for all crawlers  
-   - Rate limiting handling  
-   - URL resolution (relative to absolute)  
-   - Thumbnail image handling  
-   - Price extraction  
+1. **BaseCrawler**: Provides shared functionality across all crawlers
+   - Rate limiting handling
+   - URL resolution (relative to absolute)
+   - Thumbnail image processing
+   - Price extraction
 
-2. **ConfigurableCrawler**: Flexible, configuration-driven crawler  
-   - Allows crawler creation per site via configuration only  
-   - Operates based on CSS selectors  
-   - Supports custom handlers and element transformations
-   - Reusable modular components  
+2. **UnifiedCrawler**: Flexible configuration-driven crawler
+   - Create site-specific crawlers through configuration
+   - CSS selector-based operation
+   - Support for custom handlers and element transformations
+   - Reusable modular components
 
-3. **ChromeDBCrawler**: Headless browser-based crawler
+3. **Chrome-Enabled Crawling**: Headless browser-based crawler
    - Handles sites requiring JavaScript execution
-   - Uses browserless/chrome to render pages
+   - Uses ChromeDB for page rendering
    - Processes fully rendered DOM content
-   - Configurable with same selector approach as other crawlers
+   - Configurable with same selector approach as standard crawlers
 
-4. **Site-specific Crawlers**: Handle site-specific needs  
-   - Each crawler in its own file for better organization
-   - Config-based approach: reuse common logic with only config differences
-   - Custom handlers for sites with special extraction requirements
-   - Option to use either standard HTTP or ChromeDB crawling
-
-### Customization System
-
-The crawler architecture includes a flexible customization system:
-
-1. **CustomHandlers**: Allow specialized element processing
-   - Map-based approach mapping elements to handler functions
-   - Can provide custom extraction logic for any element type
-   - Enables special processing for complex site structures
-
-2. **ElementTransformers**: Provide HTML element manipulations
-   - Support for removing specific elements from selections
-   - Configurable by element path (title, postedAt, etc.)
-   - Enhances extraction accuracy by cleaning unwanted elements
+4. **Site-Specific Crawlers**: Handle unique site requirements
+   - Each crawler in separate file for better organization
+   - Configuration-based approach for reusing common logic
+   - Custom handlers for special extraction requirements
+   - Option to use either standard HTTP or Chrome-based crawling
 
 ### Adding a New Crawler
 
 To add a new crawler:
 
 1. Create a new file in `internal/crawler` named after the site (e.g., `mynewsite.go`)
-2. Implement a constructor function that returns a `ConfigurableCrawler`:
+2. Implement a constructor function that returns a `UnifiedCrawler`:
 
 ```go
 package crawler
@@ -188,46 +170,28 @@ import (
 	"sjsage522/hotdealworker/config"
 	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/services/cache"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 // NewMySiteCrawler creates a crawler for MySite
-func NewMySiteCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
-	// Define custom handlers if needed
-	customHandlers := CustomHandlers{
-		ElementHandlers: map[string]CustomElementHandlerFunc{
-			"postedAt": func(s *goquery.Selection) string {
-				// Custom extraction logic
-				return strings.TrimSpace(s.Find(".date-element").Text())
-			},
-		},
-	}
-
-	// Define element transformers if needed
-	elementTransformers := ElementTransformers{
-		RemoveElements: []ElementRemoval{
-			{Selector: "span.junk", ApplyToPath: "title"},
-		},
-	}
-
-	return NewConfigurableCrawler(CrawlerConfig{
-		URL:       cfg.MySiteURL, // Add to config struct
-		CacheKey:  "mysite_rate_limited",
-		BlockTime: 500,
-		BaseURL:   "https://www.mysite.com",
-		Provider:  "MySite",
+func NewMySiteCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
+	return NewUnifiedCrawler(CrawlerConfig{
+		URL:          cfg.MySiteURL, // Add to config struct
+		CacheKey:     "mysite_rate_limited",
+		BlockTime:    500,
+		BaseURL:      "https://www.mysite.com",
+		Provider:     "MySite",
+		UseChrome:    false, // Use standard HTTP crawler
+		ChromeDBAddr: cfg.ChromeDBAddr, // For sites requiring JavaScript
 		Selectors: Selectors{
-			DealList:   "div.deal-list div.item",
-			Title:      "h3.title",
-			Link:       "a.deal-link",
-			Thumbnail:  "img.thumbnail",
-			PostedAt:   "span.date",
-			PriceRegex: `\$([0-9,.]+)`,
-			ThumbRegex: ``, // If needed
+			DealList:    "div.deal-list div.item",
+			Title:       "h3.title",
+			Link:        "a.deal-link",
+			Thumbnail:   "img.thumbnail",
+			PostedAt:    "span.date",
+			PriceRegex:  `\$([0-9,.]+)`,
+			ThumbRegex:  ``, // If needed
+			ClassFilter: "", // Optional: filter out items with this class
 		},
-		CustomHandlers:     customHandlers,
-		ElementTransformers: elementTransformers,
 		IDExtractor: func(link string) (string, error) {
 			return helpers.GetSplitPart(link, "/", 5)
 		},
@@ -238,12 +202,12 @@ func NewMySiteCrawler(cfg config.Config, cacheSvc cache.CacheService) *Configura
 3. Add the crawler to `factory.go`:
 
 ```go
-func createConfigurableCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
-	var crawlers []Crawler
+func CreateCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
+	crawlers := []Crawler{}
 	
 	// Add existing crawlers
 	crawlers = append(crawlers, NewClienCrawler(cfg, cacheSvc))
-	...
+	// ...
 	
 	// Add your new crawler
 	crawlers = append(crawlers, NewMySiteCrawler(cfg, cacheSvc))
@@ -252,61 +216,52 @@ func createConfigurableCrawlers(cfg config.Config, cacheSvc cache.CacheService) 
 }
 ```
 
-4. Add the site URL to `config.go` and `.env`
+4. Add the site URL to `config.go` and environment variables
 
-### Using Custom Handlers
+### Custom Element Handlers
 
-Custom handlers allow specialized processing for any element. Use them when the default extraction isn't sufficient:
+For sites with complex HTML structures, you can add custom element handlers to the `Selectors` struct:
 
 ```go
-// Define a custom handler for complex posted dates
-CustomHandlers{
-	ElementHandlers: map[string]CustomElementHandlerFunc{
-		"postedAt": func(s *goquery.Selection) string {
-			// Detect the format and process accordingly
-			rawDate := s.Find(".date-field").Text()
-			if strings.Contains(rawDate, "ago") {
-				// Convert relative date to absolute
-				return convertRelativeDate(rawDate)
-			}
-			return strings.TrimSpace(rawDate)
-		},
-		"title": func(s *goquery.Selection) string {
-			// Combine multiple elements for title
-			mainTitle := s.Find(".main-title").Text()
-			subTitle := s.Find(".subtitle").Text()
-			return strings.TrimSpace(mainTitle + " - " + subTitle)
-		},
-	},
+Selectors: Selectors{
+    DealList:    "div.deal-list div.item",
+    Title:       "h3.title",
+    Link:        "a.deal-link",
+    Thumbnail:   "img.thumbnail",
+    PostedAt:    "span.date",
+    PriceRegex:  `\$([0-9,.]+)`,
+    
+    // Custom handlers for specific elements
+    TitleHandlers: []ElementHandler{
+        func(s *goquery.Selection) string {
+            // Custom logic for title extraction
+            mainTitle := s.Find(".main-title").Text()
+            subTitle := s.Find(".subtitle").Text()
+            return strings.TrimSpace(mainTitle + " - " + subTitle)
+        },
+    },
+    PostedAtHandlers: []ElementHandler{
+        func(s *goquery.Selection) string {
+            // Custom date handling
+            rawDate := s.Find(".date-field").Text()
+            if strings.Contains(rawDate, "ago") {
+                // Convert relative date to absolute
+                return convertRelativeDate(rawDate)
+            }
+            return strings.TrimSpace(rawDate)
+        },
+    },
 }
 ```
 
-### Using Element Transformers
+### Scalability Benefits
 
-Element transformers modify selections before text extraction. They're useful for removing unwanted elements:
+This architecture provides several advantages:
 
-```go
-// Remove elements that interfere with clean text extraction
-ElementTransformers{
-	RemoveElements: []ElementRemoval{
-		// Remove price information from title
-		{Selector: "span.price-tag", ApplyToPath: "title"},
-		
-		// Remove icons from posted date
-		{Selector: "i.icon", ApplyToPath: "postedAt"},
-		{Selector: "span.label", ApplyToPath: "postedAt"},
-	},
-}
-```
-
-### Scalability
-
-This architecture provides the following benefits:
-
-- **Easy to add new sites**: Add new crawlers using just configuration  
-- **Improved maintainability**: Reuse shared logic and remove duplication  
-- **Highly extensible**: Custom handlers and transformers for special cases
-- **Testable design**: Easy to test due to configuration-based crawling  
+- **Easy Site Addition**: Add new crawlers using just configuration
+- **Improved Maintainability**: Reuse shared logic and eliminate duplication
+- **High Extensibility**: Custom handlers and transformers for special cases
+- **Testable Design**: Easy testing with configuration-based crawling
 
 ## License
 
