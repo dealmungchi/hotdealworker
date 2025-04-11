@@ -77,8 +77,8 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 	evalPayload := map[string]interface{}{
 		"url": c.URL,
 		"gotoOptions": map[string]interface{}{
-			"waitUntil": "domcontentloaded",
-			"timeout":   10000,
+			"waitUntil": "networkidle0", // Wait for all network activity to stop
+			"timeout":   45000,
 		},
 		"evaluate": "document.documentElement.outerHTML",
 	}
@@ -112,7 +112,7 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 	contentPayload := map[string]interface{}{
 		"url": c.URL,
 		"gotoOptions": map[string]interface{}{
-			"waitUntil": "domcontentloaded",
+			"waitUntil": "networkidle0", // Wait for all network activity to stop
 			"timeout":   45000,
 		},
 	}
@@ -154,8 +154,7 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 				});
 				
 				// Navigate to the URL
-				await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-				await page.waitForTimeout(5000);
+				await page.goto(context.url, { waitUntil: 'networkidle0', timeout: 45000 });
 				
 				// Scroll to trigger lazy loading
 				await page.evaluate(() => window.scrollBy(0, 500));
@@ -288,15 +287,18 @@ func (c *BaseCrawler) ResolveURL(href string) string {
 		return ""
 	}
 
-	if strings.HasPrefix(href, "//") {
-		return "https:" + href
-	}
-
+	// 이미 스킴이 있는 절대 URL
 	if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
 		return href
 	}
 
-	if strings.Contains(href, ".") && !strings.HasPrefix(href, "/") {
+	// 프로토콜 상대 URL
+	if strings.HasPrefix(href, "//") {
+		return "https:" + href
+	}
+
+	// 스킴 없는 절대 URL (도메인처럼 보이는 경우만)
+	if isLikelyDomainURL(href) {
 		return "https://" + href
 	}
 
@@ -308,11 +310,13 @@ func (c *BaseCrawler) ResolveURL(href string) string {
 
 	base, err := url.Parse(baseURL)
 	if err != nil {
+		log.Printf("Error parsing base URL '%s': %v", baseURL, err)
 		return href
 	}
 
 	ref, err := url.Parse(href)
 	if err != nil {
+		log.Printf("Error parsing href '%s': %v", href, err)
 		return href
 	}
 
@@ -370,4 +374,9 @@ func (c *BaseCrawler) ExtractURLFromStyle(style string) string {
 		return matches[1]
 	}
 	return ""
+}
+
+func isLikelyDomainURL(href string) bool {
+	domainLike := regexp.MustCompile(`^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/|$)`)
+	return domainLike.MatchString(href)
 }

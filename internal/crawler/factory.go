@@ -19,6 +19,7 @@ func CreateCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
 	crawlers = append(crawlers, NewArcaCrawler(cfg, cacheSvc))
 	crawlers = append(crawlers, NewCoolandjoyCrawler(cfg, cacheSvc))
 	crawlers = append(crawlers, NewDealbadaCrawler(cfg, cacheSvc))
+	crawlers = append(crawlers, NewMissycoupons(cfg, cacheSvc))
 
 	return crawlers
 }

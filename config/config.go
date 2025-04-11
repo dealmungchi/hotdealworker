@@ -26,16 +26,17 @@ type Config struct {
 	UseChromeDB  bool
 
 	// URLs for different crawlers
-	FMKoreaURL    string
-	DamoangURL    string
-	ArcaURL       string
-	QuasarURL     string
-	CoolandjoyURL string
-	ClienURL      string
-	PpomURL       string
-	PpomEnURL     string
-	RuliwebURL    string
-	DealbadaURL   string
+	FMKoreaURL      string
+	DamoangURL      string
+	ArcaURL         string
+	QuasarURL       string
+	CoolandjoyURL   string
+	ClienURL        string
+	PpomURL         string
+	PpomEnURL       string
+	RuliwebURL      string
+	DealbadaURL     string
+	MissycouponsURL string
 
 	// Environment
 	Environment string
@@ -44,7 +45,7 @@ type Config struct {
 // LoadConfig loads the configuration from environment variables with defaults
 func LoadConfig() Config {
 	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
-	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "20"))
+	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "40"))
 	redisStreamCount, _ := strconv.Atoi(getEnv("REDIS_STREAM_COUNT", "1"))
 	redisStreamMaxLength, _ := strconv.Atoi(getEnv("REDIS_STREAM_MAX_LENGTH", "500"))
 
@@ -67,6 +68,7 @@ func LoadConfig() Config {
 		PpomEnURL:            getEnv("PPOMEN_URL", "https://www.ppomppu.co.kr"),
 		RuliwebURL:           getEnv("RULIWEB_URL", "https://bbs.ruliweb.com"),
 		DealbadaURL:          getEnv("DEALBADA_URL", "https://www.dealbada.com"),
+		MissycouponsURL:      getEnv("MISSYCOUPONS_URL", "https://www.missycoupons.com"),
 		Environment:          getEnv("HOTDEAL_ENVIRONMENT", "development"),
 	}
 }
