@@ -93,5 +93,27 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 		if err := w.publisher.Publish(c.GetProvider(), dealData); err != nil {
 			w.logger.LogError(crawlerName, err)
 		}
+
+		w.newMethod(deal, deals, dealData, crawlerName)
+	}
+}
+
+func (w *Worker) newMethod(deal crawler.HotDeal, deals []crawler.HotDeal, dealData []byte, crawlerName string) {
+	if os.Getenv("HOTDEAL_ENVIRONMENT") != "production" {
+		// Log only the first deal for each provider
+		if deal == deals[0] {
+			var loggableDeal map[string]interface{}
+			if err := json.Unmarshal(dealData, &loggableDeal); err != nil {
+				w.logger.LogError(crawlerName, err)
+			}
+			if _, exists := loggableDeal["thumbnail"]; exists {
+				loggableDeal["thumbnail"] = "OK"
+			}
+			loggableDealData, err := json.Marshal(loggableDeal)
+			if err != nil {
+				w.logger.LogError(crawlerName, err)
+			}
+			w.logger.LogInfo("크롤링 데이터: %s", string(loggableDealData))
+		}
 	}
 }

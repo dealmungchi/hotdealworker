@@ -39,7 +39,7 @@ func FetchSimply(url string) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("fetchSimply unexpected status code: %d", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
@@ -92,7 +92,7 @@ func FetchWithRandomHeaders(url string) (io.Reader, error) {
 	// Check for other error status codes
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("fetch %s unexpected status code: %d", url, resp.StatusCode)
 	}
 
 	defer resp.Body.Close()

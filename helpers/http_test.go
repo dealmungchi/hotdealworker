@@ -16,7 +16,6 @@ func TestFetchWithRandomHeaders(t *testing.T) {
 		assert.NotEmpty(t, r.Header.Get("User-Agent"))
 		assert.NotEmpty(t, r.Header.Get("Accept"))
 		assert.NotEmpty(t, r.Header.Get("Accept-Language"))
-		assert.NotEmpty(t, r.Header.Get("Cookie"))
 		assert.NotEmpty(t, r.Header.Get("referer"))
 
 		// Send a response

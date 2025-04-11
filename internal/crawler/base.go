@@ -1,9 +1,13 @@
 package crawler
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -56,6 +60,164 @@ func (c *BaseCrawler) fetchWithCache() (io.Reader, error) {
 	return utf8Body, nil
 }
 
+// fetchWithChromeDB fetches a URL using ChromeDB
+func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
+	// Check if the crawler is rate limited
+	if c.CacheSvc != nil && c.CacheKey != "" {
+		_, err := c.CacheSvc.Get(c.CacheKey)
+		if err == nil {
+			return nil, fmt.Errorf("%s: %d초 동안 더 이상 요청을 보내지 않음", c.CacheKey, c.BlockTime/time.Second)
+		}
+	}
+
+	// FMKorea needs ChromeDB, direct HTTP requests will be rate limited
+	httpClient := &http.Client{Timeout: 60 * time.Second}
+
+	// Try evaluate endpoint first - most reliable for getting HTML content
+	evalPayload := map[string]interface{}{
+		"url": c.URL,
+		"gotoOptions": map[string]interface{}{
+			"waitUntil": "domcontentloaded",
+			"timeout":   10000,
+		},
+		"evaluate": "document.documentElement.outerHTML",
+	}
+
+	evalData, _ := json.Marshal(evalPayload)
+	evalReq, err := http.NewRequest("POST", c.ChromeDBAddr+"/evaluate", bytes.NewBuffer(evalData))
+	if err == nil {
+		evalReq.Header.Set("Content-Type", "application/json")
+
+		evalResp, evalErr := httpClient.Do(evalReq)
+		if evalErr == nil && evalResp.StatusCode == http.StatusOK {
+			defer evalResp.Body.Close()
+			evalBytes, _ := io.ReadAll(evalResp.Body)
+
+			if len(evalBytes) > 0 {
+				fmt.Printf("DEBUG: Eval endpoint successful, got %d bytes\n", len(evalBytes))
+				var result map[string]interface{}
+				if err := json.Unmarshal(evalBytes, &result); err == nil {
+					if data, ok := result["data"].(string); ok && len(data) > 0 {
+						fmt.Printf("DEBUG: Found HTML in evaluate result\n")
+						return strings.NewReader(data), nil
+					}
+				}
+				// If we couldn't extract HTML from JSON, return raw content
+				return bytes.NewReader(evalBytes), nil
+			}
+		}
+	}
+
+	// If evaluate endpoint failed, try content endpoint
+	contentPayload := map[string]interface{}{
+		"url": c.URL,
+		"gotoOptions": map[string]interface{}{
+			"waitUntil": "domcontentloaded",
+			"timeout":   45000,
+		},
+	}
+
+	contentData, _ := json.Marshal(contentPayload)
+	contentReq, err := http.NewRequest("POST", c.ChromeDBAddr+"/content", bytes.NewBuffer(contentData))
+	if err == nil {
+		contentReq.Header.Set("Content-Type", "application/json")
+
+		contentResp, contentErr := httpClient.Do(contentReq)
+		if contentErr == nil && contentResp.StatusCode == http.StatusOK {
+			defer contentResp.Body.Close()
+			contentBytes, _ := io.ReadAll(contentResp.Body)
+
+			if len(contentBytes) > 0 {
+				return bytes.NewReader(contentBytes), nil
+			}
+		}
+	}
+
+	// If all direct endpoints failed, try custom function
+	funcPayload := map[string]interface{}{
+		"code": `
+		module.exports = async ({ page, context }) => {
+			try {
+				console.log("Using direct HTML extraction method");
+				
+				// Set up basic browser configuration
+				await page.setViewport({ width: 1280, height: 800 });
+				await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+				await page.setExtraHTTPHeaders({
+					'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+					'Referer': 'https://google.co.kr/',
+					'Cache-Control': 'no-cache',
+					'Pragma': 'no-cache',
+					'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
+					'Sec-Ch-Ua-Mobile': '?0',
+					'Sec-Ch-Ua-Platform': '"Windows"',
+				});
+				
+				// Navigate to the URL
+				await page.goto(context.url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+				await page.waitForTimeout(5000);
+				
+				// Scroll to trigger lazy loading
+				await page.evaluate(() => window.scrollBy(0, 500));
+				await page.waitForTimeout(2000);
+				
+				// Get HTML directly using DOM API 
+				const html = await page.evaluate(() => document.documentElement.outerHTML);
+				console.log("HTML length from evaluate:", html.length);
+				
+				// Return the HTML as a string, not wrapped in an object
+				return html;
+			} catch (e) {
+				console.error("Error:", e);
+				return "<html><body>Error: " + e.message + "</body></html>";
+			}
+		}`,
+		"context": map[string]interface{}{
+			"url": c.URL,
+		},
+	}
+
+	funcData, _ := json.Marshal(funcPayload)
+	funcReq, _ := http.NewRequest("POST", c.ChromeDBAddr+"/function", bytes.NewBuffer(funcData))
+	funcReq.Header.Set("Content-Type", "application/json")
+
+	funcResp, funcErr := httpClient.Do(funcReq)
+	if funcErr == nil && funcResp.StatusCode == http.StatusOK {
+		defer funcResp.Body.Close()
+		funcBytes, _ := io.ReadAll(funcResp.Body)
+
+		if len(funcBytes) > 0 {
+			fmt.Printf("DEBUG: Function endpoint returned %d bytes\n", len(funcBytes))
+			return bytes.NewReader(funcBytes), nil
+		}
+	}
+
+	// Final fallback - try direct scrape
+	scrapeURL := fmt.Sprintf("%s/scrape?url=%s", c.ChromeDBAddr, c.URL)
+	scrapeReq, _ := http.NewRequest("GET", scrapeURL, nil)
+
+	scrapeResp, scrapeErr := httpClient.Do(scrapeReq)
+	if scrapeErr == nil && scrapeResp.StatusCode == http.StatusOK {
+		defer scrapeResp.Body.Close()
+		scrapeBytes, _ := io.ReadAll(scrapeResp.Body)
+
+		if len(scrapeBytes) > 0 {
+			fmt.Printf("DEBUG: Scrape endpoint returned %d bytes\n", len(scrapeBytes))
+			return bytes.NewReader(scrapeBytes), nil
+		}
+	}
+
+	// If all attempts failed
+	if c.CacheSvc != nil && c.CacheKey != "" {
+		shortBlockTime := 30 * time.Second
+		if setErr := c.CacheSvc.Set(c.CacheKey, []byte("30"), shortBlockTime); setErr != nil {
+			fmt.Printf("DEBUG: Failed to set rate limit cache: %v\n", setErr)
+		}
+	}
+
+	return nil, fmt.Errorf("all fetch attempts failed")
+}
+
 // createDocument creates a goquery document from a reader
 func (c *BaseCrawler) createDocument(reader io.Reader) (*goquery.Document, error) {
 	doc, err := goquery.NewDocumentFromReader(reader)
@@ -81,6 +243,7 @@ func (c *BaseCrawler) processDeals(selections *goquery.Selection, processor Proc
 				// Log the error but continue processing other deals
 				// We don't return the error because it would stop all crawling
 				// Instead, we just skip this deal
+				log.Printf("[%s] Error processing deal: %v", c.Provider, err)
 				return
 			}
 
@@ -129,26 +292,31 @@ func (c *BaseCrawler) ResolveURL(href string) string {
 		return "https:" + href
 	}
 
-	if !strings.HasPrefix(href, "http") {
-		baseURL := c.BaseURL
-		if baseURL == "" {
-			baseURL = c.URL
-		}
-
-		base, err := url.Parse(baseURL)
-		if err != nil {
-			return href
-		}
-
-		ref, err := url.Parse(href)
-		if err != nil {
-			return href
-		}
-
-		return base.ResolveReference(ref).String()
+	if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
+		return href
 	}
 
-	return href
+	if strings.Contains(href, ".") && !strings.HasPrefix(href, "/") {
+		return "https://" + href
+	}
+
+	// 상대 경로 처리
+	baseURL := c.BaseURL
+	if baseURL == "" {
+		baseURL = c.URL
+	}
+
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return href
+	}
+
+	ref, err := url.Parse(href)
+	if err != nil {
+		return href
+	}
+
+	return base.ResolveReference(ref).String()
 }
 
 // ExtractPrice extracts the price from a title using the configured regex
@@ -160,8 +328,7 @@ func (c *BaseCrawler) ExtractPrice(title string) (string, string) {
 	re := regexp.MustCompile(c.PriceRegex)
 	if match := re.FindStringSubmatch(title); len(match) > 1 {
 		price := strings.TrimSpace(match[1])
-		cleanTitle := strings.TrimSpace(strings.Replace(title, "("+match[1]+")", "", 1))
-		return cleanTitle, price
+		return title, price
 	}
 
 	return title, ""
@@ -176,7 +343,7 @@ func (c *BaseCrawler) ProcessImage(imageURL string) (string, string, error) {
 
 	data, err := helpers.FetchSimply(imageURL)
 	if err != nil {
-		return "", "", err
+		return "", "", nil
 	}
 
 	return base64.StdEncoding.EncodeToString(data), imageURL, nil

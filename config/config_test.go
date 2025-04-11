@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +14,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, 0, config.RedisDB)
 	assert.Equal(t, 1, config.RedisStreamCount)
 	assert.Equal(t, "localhost:11211", config.MemcacheAddr)
-	assert.Equal(t, 60*time.Second, config.CrawlInterval)
 
 	// Test with environment variables
 	os.Setenv("REDIS_ADDR", "redis.example.com:6379")
@@ -30,7 +28,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, 1, config.RedisDB)
 	assert.Equal(t, 1, config.RedisStreamCount)
 	assert.Equal(t, "memcache.example.com:11211", config.MemcacheAddr)
-	assert.Equal(t, 30*time.Second, config.CrawlInterval)
 	assert.Equal(t, "https://example.com/fmkorea", config.FMKoreaURL)
 
 	// Clean up

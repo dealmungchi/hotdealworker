@@ -7,27 +7,22 @@ import (
 )
 
 // NewPpomEnCrawler creates a PpomEn crawler
-func NewPpomEnCrawler(cfg config.Config, cacheSvc cache.CacheService) *ConfigurableCrawler {
-	return NewConfigurableCrawler(CrawlerConfig{
-		// PpomEn crawler configuration
-		URL:       cfg.PpomEnURL + "/zboard/zboard.php?id=ppomppu4",
-		CacheKey:  "ppom_en_rate_limited",
-		BlockTime: 500,
-		BaseURL:   cfg.PpomEnURL,
-		Provider:  "PpomEn",
+func NewPpomEnCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
+	return NewUnifiedCrawler(CrawlerConfig{
+		URL:          cfg.PpomEnURL + "/zboard/zboard.php?id=ppomppu4",
+		CacheKey:     "ppom_en_rate_limited",
+		BlockTime:    500,
+		BaseURL:      cfg.PpomEnURL,
+		Provider:     "PpomEn",
+		UseChrome:    false,
+		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{
 			DealList:   "tr.baseList.bbs_new1",
 			Title:      "div.baseList-cover a.baseList-title",
 			Link:       "div.baseList-cover a.baseList-title",
 			Thumbnail:  "a.baseList-thumb img",
 			PostedAt:   "time.baseList-time",
-			PriceRegex: `\$([\d,.]+)`,
-		},
-		CustomHandlers: CustomHandlers{
-			ElementHandlers: map[string]CustomElementHandlerFunc{},
-		},
-		ElementTransformers: ElementTransformers{
-			RemoveElements: []ElementRemoval{},
+			PriceRegex: `\$([\\d,.]+)`,
 		},
 		IDExtractor: func(link string) (string, error) {
 			return helpers.GetSplitPart(link, "no=", 1)

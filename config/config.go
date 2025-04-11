@@ -35,6 +35,7 @@ type Config struct {
 	PpomURL       string
 	PpomEnURL     string
 	RuliwebURL    string
+	DealbadaURL   string
 
 	// Environment
 	Environment string
@@ -46,7 +47,6 @@ func LoadConfig() Config {
 	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "20"))
 	redisStreamCount, _ := strconv.Atoi(getEnv("REDIS_STREAM_COUNT", "1"))
 	redisStreamMaxLength, _ := strconv.Atoi(getEnv("REDIS_STREAM_MAX_LENGTH", "500"))
-	useChromeDB, _ := strconv.ParseBool(getEnv("USE_CHROME_DB", "true"))
 
 	return Config{
 		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
@@ -57,7 +57,6 @@ func LoadConfig() Config {
 		MemcacheAddr:         getEnv("MEMCACHE_ADDR", "localhost:11211"),
 		CrawlInterval:        time.Duration(crawlInterval) * time.Second,
 		ChromeDBAddr:         getEnv("CHROME_DB_ADDR", "http://localhost:3000"),
-		UseChromeDB:          useChromeDB,
 		FMKoreaURL:           getEnv("FMKOREA_URL", "http://www.fmkorea.com"),
 		DamoangURL:           getEnv("DAMOANG_URL", "https://damoang.net"),
 		ArcaURL:              getEnv("ARCA_URL", "https://arca.live"),
@@ -67,6 +66,7 @@ func LoadConfig() Config {
 		PpomURL:              getEnv("PPOM_URL", "https://www.ppomppu.co.kr"),
 		PpomEnURL:            getEnv("PPOMEN_URL", "https://www.ppomppu.co.kr"),
 		RuliwebURL:           getEnv("RULIWEB_URL", "https://bbs.ruliweb.com"),
+		DealbadaURL:          getEnv("DEALBADA_URL", "https://www.dealbada.com"),
 		Environment:          getEnv("HOTDEAL_ENVIRONMENT", "development"),
 	}
 }

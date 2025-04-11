@@ -26,23 +26,21 @@ type Crawler interface {
 	GetProvider() string
 }
 
+// ElementHandler defines a function to process a DOM element and return a string value
+type ElementHandler func(*goquery.Selection) string
+
+// CustomElementHandlerFunc defines a custom handler for a specific element
+type CustomElementHandlerFunc func(*goquery.Selection) string
+
 // ProcessorFunc defines the function signature for processing a single deal
 type ProcessorFunc func(*goquery.Selection) (*HotDeal, error)
 
 // IDExtractorFunc defines the function signature for extracting an ID from a URL
 type IDExtractorFunc func(string) (string, error)
 
-// CustomElementHandlerFunc defines a function to customize extraction logic for elements
-type CustomElementHandlerFunc func(*goquery.Selection) string
-
-// ElementRemoval defines elements to remove from a selection before extracting text
-type ElementRemoval struct {
-	Selector    string // Selector to find elements to remove
-	ApplyToPath string // The path to apply this to (e.g., "title", "postedAt")
-}
-
-// Selectors contains CSS selectors for various elements in the page
+// Selectors contains CSS selectors and handlers for various elements in the page
 type Selectors struct {
+	// CSS Selectors
 	DealList    string
 	Title       string
 	Link        string
@@ -52,29 +50,24 @@ type Selectors struct {
 	PriceRegex  string
 	ThumbRegex  string
 	ClassFilter string
-}
 
-// CustomHandlers contains custom handlers for element processing
-type CustomHandlers struct {
-	// Map paths to custom handlers
-	ElementHandlers map[string]CustomElementHandlerFunc
-}
-
-// ElementTransformers contains configurations for transforming elements
-type ElementTransformers struct {
-	// Elements to remove from selections
-	RemoveElements []ElementRemoval
+	// Element handlers for each field
+	TitleHandlers     []ElementHandler
+	LinkHandlers      []ElementHandler
+	PriceHandlers     []ElementHandler
+	ThumbnailHandlers []ElementHandler
+	PostedAtHandlers  []ElementHandler
 }
 
 // CrawlerConfig contains configuration for a crawler
 type CrawlerConfig struct {
-	URL                 string
-	CacheKey            string
-	BlockTime           int
-	BaseURL             string
-	Provider            string
-	Selectors           Selectors
-	IDExtractor         IDExtractorFunc
-	CustomHandlers      CustomHandlers
-	ElementTransformers ElementTransformers
+	URL          string
+	CacheKey     string
+	BlockTime    int
+	BaseURL      string
+	Provider     string
+	Selectors    Selectors
+	IDExtractor  IDExtractorFunc
+	UseChrome    bool
+	ChromeDBAddr string
 }
