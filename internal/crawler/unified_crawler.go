@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -95,6 +94,7 @@ func (c *UnifiedCrawler) applyHandlers(s *goquery.Selection, handlers []ElementH
 // defaultTitleHandler is the default handler for extracting titles
 func (c *UnifiedCrawler) defaultTitleHandler(s *goquery.Selection) string {
 	titleSel := s.Find(c.Selectors.Title)
+
 	if titleSel.Length() == 0 {
 		return ""
 	}
@@ -170,7 +170,7 @@ func (c *UnifiedCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	}
 
 	if title == "" {
-		return nil, fmt.Errorf("title is empty")
+		return nil, nil
 	}
 
 	// Extract link
@@ -183,7 +183,7 @@ func (c *UnifiedCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 
 	link = strings.TrimSpace(link)
 	if link == "" {
-		return nil, fmt.Errorf("link is empty")
+		return nil, nil
 	}
 
 	// Extract ID from the link
