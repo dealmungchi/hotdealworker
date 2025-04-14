@@ -38,6 +38,7 @@ type Config struct {
 	DealbadaURL     string
 	MissycouponsURL string
 	MalltailURL     string
+	BbasakURL       string
 
 	// Environment
 	Environment string
@@ -71,6 +72,7 @@ func LoadConfig() Config {
 		DealbadaURL:          getEnv("DEALBADA_URL", "https://www.dealbada.com"),
 		MissycouponsURL:      getEnv("MISSYCOUPONS_URL", "https://www.missycoupons.com"),
 		MalltailURL:          getEnv("MALLTAIL_URL", "https://post.malltail.com"),
+		BbasakURL:            getEnv("BBASAK_URL", "https://bbasak.com"),
 		Environment:          getEnv("HOTDEAL_ENVIRONMENT", "development"),
 	}
 }
