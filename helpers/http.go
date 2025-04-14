@@ -32,7 +32,16 @@ var (
 )
 
 func FetchSimply(url string) ([]byte, error) {
-	resp, err := client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set a random User-Agent header
+	rnd := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
+	req.Header.Set("User-Agent", userAgents[rnd.Intn(len(userAgents))])
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}

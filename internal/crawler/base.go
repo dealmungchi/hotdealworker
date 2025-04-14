@@ -338,6 +338,7 @@ func (c *BaseCrawler) ProcessImage(imageURL string) (string, string, error) {
 
 	data, err := helpers.FetchSimply(imageURL)
 	if err != nil {
+		log.Printf("Error fetching image: %v", err)
 		return "", "", nil
 	}
 
