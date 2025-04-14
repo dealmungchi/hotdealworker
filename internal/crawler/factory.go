@@ -7,19 +7,17 @@ import (
 
 // CreateCrawlers creates all the crawlers based on the configuration
 func CreateCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
-	crawlers := []Crawler{}
-
-	crawlers = append(crawlers, NewClienCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewRuliwebCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewFMKoreaCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewPpomCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewPpomEnCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewQuasarCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewDamoangCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewArcaCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewCoolandjoyCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewDealbadaCrawler(cfg, cacheSvc))
-	crawlers = append(crawlers, NewMissycoupons(cfg, cacheSvc))
-
-	return crawlers
+	return []Crawler{
+		NewClienCrawler(cfg, cacheSvc),
+		NewRuliwebCrawler(cfg, cacheSvc),
+		NewFMKoreaCrawler(cfg, cacheSvc),
+		NewPpomCrawler(cfg, cacheSvc),
+		NewPpomEnCrawler(cfg, cacheSvc),
+		NewQuasarCrawler(cfg, cacheSvc),
+		NewDamoangCrawler(cfg, cacheSvc),
+		NewArcaCrawler(cfg, cacheSvc),
+		NewCoolandjoyCrawler(cfg, cacheSvc),
+		NewDealbadaCrawler(cfg, cacheSvc),
+		NewMissycoupons(cfg, cacheSvc),
+	}
 }
