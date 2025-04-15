@@ -15,17 +15,22 @@ A robust Go application that crawls multiple e-commerce and community websites f
 
 | Site | Status | URL |
 |------|--------|-----|
-| FMKorea | In Progress | www.fmkorea.com |
-| Damoang | Supported | damoang.net |
-| Arca Live | Supported | arca.live |
-| Quasar Zone | Supported | quasarzone.com |
-| Coolandjoy | Supported | coolenjoy.net |
-| Clien | Supported | www.clien.net |
-| Ppomppu | Supported | www.ppomppu.co.kr |
-| Ppomppu English | Supported | www.ppomppu.co.kr |
-| Ruliweb | Supported | bbs.ruliweb.com |
-| Missycoupons | Supported | www.missycoupons.com |
-| Dealbada | Supported | www.dealbada.com |
+| FMKorea | Supported | https://www.fmkorea.com |
+| Damoang | Supported | https://damoang.net |
+| Arca Live | Supported | https://arca.live |
+| Quasar Zone | Supported | https://quasarzone.com |
+| Coolandjoy | Supported | https://coolenjoy.net |
+| Clien | Supported | https://www.clien.net |
+| Ppomppu | Supported | https://www.ppomppu.co.kr |
+| Ppomppu English | Supported | https://www.ppomppu.co.kr |
+| Ruliweb | Supported | https://bbs.ruliweb.com |
+| Dealbada | Supported | https://www.dealbada.com |
+| Missycoupons | Supported | https://www.missycoupons.com |
+| Malltail | Supported | https://post.malltail.com |
+| Bbasak | Supported | https://bbasak.com |
+| City | Supported | https://www.city.kr |
+| Eomisae | Supported | https://eomisae.co.kr |
+| Zod | Supported | https://zod.kr |
 
 ## Environment Variables
 
