@@ -23,5 +23,6 @@ func CreateCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
 		NewBbasak(cfg, cacheSvc),
 		NewCity(cfg, cacheSvc),
 		NewEomisae(cfg, cacheSvc),
+		NewZod(cfg, cacheSvc),
 	}
 }
