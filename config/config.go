@@ -40,6 +40,7 @@ type Config struct {
 	MalltailURL     string
 	BbasakURL       string
 	CityURL         string
+	EomisaeURL      string
 
 	// Environment
 	Environment string
@@ -75,6 +76,7 @@ func LoadConfig() Config {
 		MalltailURL:          getEnv("MALLTAIL_URL", "https://post.malltail.com"),
 		BbasakURL:            getEnv("BBASAK_URL", "https://bbasak.com"),
 		CityURL:              getEnv("CITY_URL", "https://www.city.kr"),
+		EomisaeURL:           getEnv("EOMISAE_URL", "https://eomisae.co.kr"),
 		Environment:          getEnv("HOTDEAL_ENVIRONMENT", "development"),
 	}
 }

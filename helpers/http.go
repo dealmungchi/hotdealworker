@@ -48,7 +48,7 @@ func FetchSimply(url string) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("fetchSimply unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("fetchSimply unexpected status code: %d, url: %s", resp.StatusCode, url)
 	}
 
 	defer resp.Body.Close()
