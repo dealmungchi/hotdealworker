@@ -63,7 +63,7 @@ func LoadConfig() Config {
 		MemcacheAddr:         getEnv("MEMCACHE_ADDR", "localhost:11211"),
 		CrawlInterval:        time.Duration(crawlInterval) * time.Second,
 		ChromeDBAddr:         getEnv("CHROME_DB_ADDR", "http://localhost:3000"),
-		FMKoreaURL:           getEnv("FMKOREA_URL", "http://www.fmkorea.com"),
+		FMKoreaURL:           getEnv("FMKOREA_URL", "https://www.fmkorea.com"),
 		DamoangURL:           getEnv("DAMOANG_URL", "https://damoang.net"),
 		ArcaURL:              getEnv("ARCA_URL", "https://arca.live"),
 		QuasarURL:            getEnv("QUASAR_URL", "https://quasarzone.com"),
