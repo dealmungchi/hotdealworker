@@ -50,7 +50,7 @@ type Config struct {
 // LoadConfig loads the configuration from environment variables with defaults
 func LoadConfig() Config {
 	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
-	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "40"))
+	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "60"))
 	redisStreamCount, _ := strconv.Atoi(getEnv("REDIS_STREAM_COUNT", "1"))
 	redisStreamMaxLength, _ := strconv.Atoi(getEnv("REDIS_STREAM_MAX_LENGTH", "500"))
 
