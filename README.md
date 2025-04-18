@@ -15,22 +15,22 @@ A robust Go application that crawls multiple e-commerce and community websites f
 
 | Site | Status | URL |
 |------|--------|-----|
-| FMKorea | Supported | https://www.fmkorea.com |
-| Damoang | Supported | https://damoang.net |
-| Arca Live | Supported | https://arca.live |
-| Quasar Zone | Supported | https://quasarzone.com |
-| Coolandjoy | Supported | https://coolenjoy.net |
-| Clien | Supported | https://www.clien.net |
-| Ppomppu | Supported | https://www.ppomppu.co.kr |
-| Ppomppu English | Supported | https://www.ppomppu.co.kr |
-| Ruliweb | Supported | https://bbs.ruliweb.com |
-| Dealbada | Supported | https://www.dealbada.com |
-| Missycoupons | Supported | https://www.missycoupons.com |
-| Malltail | Supported | https://post.malltail.com |
-| Bbasak | Supported | https://bbasak.com |
-| City | Supported | https://www.city.kr |
-| Eomisae | Supported | https://eomisae.co.kr |
-| Zod | Supported | https://zod.kr |
+| FMKorea(펨코) | Supported | https://www.fmkorea.com |
+| Damoang(다모앙) | Supported | https://damoang.net |
+| Arca Live(아카라이브) | Supported | https://arca.live |
+| Quasar Zone(퀘이사존) | Supported | https://quasarzone.com |
+| Coolandjoy(쿨앤조이) | Supported | https://coolenjoy.net |
+| Clien(클리앙) | Supported | https://www.clien.net |
+| Ppomppu(뽐뿌) | Supported | https://www.ppomppu.co.kr |
+| Ppomppu English(해외뽐뿌) | Supported | https://www.ppomppu.co.kr |
+| Ruliweb(루리웹) | Supported | https://bbs.ruliweb.com |
+| Dealbada(딜바다) | Supported | https://www.dealbada.com |
+| Missycoupons(미씨쿠폰) | Supported | https://www.missycoupons.com |
+| Malltail(몰테일) | Supported | https://post.malltail.com |
+| Bbasak(빠삭) | Supported | https://bbasak.com |
+| City(시티) | Supported | https://www.city.kr |
+| Eomisae(어미새) | Supported | https://eomisae.co.kr |
+| Zod(조드) | Supported | https://zod.kr |
 
 ## Environment Variables
 
