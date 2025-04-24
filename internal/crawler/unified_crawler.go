@@ -200,7 +200,7 @@ func (c *UnifiedCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	var price string
 
 	// 1. First try to extract price from the price handler if defined and the Price selector is set
-	if c.Selectors.Price != "" && len(c.Selectors.PriceHandlers) > 0 {
+	if len(c.Selectors.PriceHandlers) > 0 {
 		price = c.applyHandlers(s, c.Selectors.PriceHandlers)
 	}
 

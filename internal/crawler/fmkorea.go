@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"regexp"
 	"strings"
 
 	"sjsage522/hotdealworker/config"
@@ -30,13 +31,20 @@ func NewFMKoreaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 		return strings.TrimSpace(cleanTitle.Text())
 	}
 
+	priceHandler := func(s *goquery.Selection) string {
+		priceText := s.Find("div.hotdeal_info span a").Text()
+		re := regexp.MustCompile(`[\d,]+원`)
+		match := re.FindString(priceText)
+		return strings.TrimSpace(match)
+	}
+
 	return NewUnifiedCrawler(CrawlerConfig{
 		URL:          cfg.FMKoreaURL + "/hotdeal",
 		CacheKey:     "fmkorea_rate_limited",
 		BlockTime:    300,
 		BaseURL:      cfg.FMKoreaURL,
 		Provider:     "FMKorea",
-		UseChrome:    true, // FMKorea는 항상 Chrome 사용
+		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{
 			DealList:      "ul li.li",
@@ -46,6 +54,7 @@ func NewFMKoreaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 			PostedAt:      "div span.regdate",
 			PriceRegex:    `\(([0-9,]+원)\)$`,
 			TitleHandlers: []ElementHandler{titleCleanerHandler},
+			PriceHandlers: []ElementHandler{priceHandler},
 		},
 		IDExtractor: func(link string) (string, error) {
 			return helpers.GetSplitPart(link, "/", 3)
