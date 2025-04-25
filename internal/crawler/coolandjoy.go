@@ -49,13 +49,21 @@ func NewCoolandjoyCrawler(cfg config.Config, cacheSvc cache.CacheService) *Unifi
 		if postedAtSel.Length() == 0 {
 			return ""
 		}
-		
+
 		// Clone to avoid modifying the original selection
 		postedAtSelClone := postedAtSel.Clone()
 		// Remove unwanted elements
 		postedAtSelClone.Find("i").Remove()
 		postedAtSelClone.Find("span").Remove()
 		return strings.TrimSpace(postedAtSelClone.Text())
+	}
+
+	priceHandler := func(s *goquery.Selection) string {
+		priceSel := s.Find("div.float-right.float-md-none.d-md-table-cell.nw-7.nw-md-auto.text-right.f-sm.font-weight-normal.pl-2.py-md-2.pr-md-1 font")
+		if priceSel.Length() == 0 {
+			return ""
+		}
+		return strings.TrimSpace(priceSel.Text())
 	}
 
 	return NewUnifiedCrawler(CrawlerConfig{
@@ -72,9 +80,9 @@ func NewCoolandjoyCrawler(cfg config.Config, cacheSvc cache.CacheService) *Unifi
 			Link:              "a.na-subject",
 			Thumbnail:         "", // No thumbnail
 			PostedAt:          "div.float-left.float-md-none.d-md-table-cell.nw-6.nw-md-auto.f-sm.font-weight-normal.py-md-2.pr-md-1",
-			PriceRegex:        `\(([0-9,]+원)\)$`,
 			ThumbnailHandlers: []ElementHandler{thumbnailHandler},
 			PostedAtHandlers:  []ElementHandler{postedAtHandler},
+			PriceHandlers:     []ElementHandler{priceHandler},
 		},
 		IDExtractor: func(link string) (string, error) {
 			return helpers.GetSplitPart(link, "/", 5)
