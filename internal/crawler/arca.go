@@ -27,6 +27,15 @@ func NewArcaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 		return strings.TrimSpace(cleanTitle.Text())
 	}
 
+	priceHandler := func(s *goquery.Selection) string {
+		priceSel := s.Find("span.deal-price")
+		if priceSel.Length() == 0 {
+			return ""
+		}
+
+		return strings.TrimSpace(priceSel.Text())
+	}
+
 	return NewUnifiedCrawler(CrawlerConfig{
 		URL:          cfg.ArcaURL + "/b/hotdeal",
 		CacheKey:     "arca_rate_limited",
@@ -43,6 +52,7 @@ func NewArcaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 			PostedAt:      "span.col-time time",
 			PriceRegex:    `\(([0-9,]+원)\)$`,
 			TitleHandlers: []ElementHandler{titleHandler},
+			PriceHandlers: []ElementHandler{priceHandler},
 		},
 		IDExtractor: func(link string) (string, error) {
 			baseLink := strings.Split(link, "?")[0]

@@ -3,7 +3,6 @@ package worker
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"reflect"
 	"sync"
 	"time"
@@ -90,31 +89,33 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 		}
 	}
 
-	w.newMethod(deals, crawlerName)
+	w.logDeals(deals, crawlerName)
 }
 
-func (w *Worker) newMethod(deals []crawler.HotDeal, crawlerName string) {
-	if os.Getenv("HOTDEAL_ENVIRONMENT") != "production" {
-		for i, deal := range deals[:5] {
-			var loggableDeal map[string]interface{}
-			dealData, err := json.MarshalIndent(deal, "", "  ")
-			if err != nil {
-				logger.Error(crawlerName, err)
-				continue
-			}
-			if err := json.Unmarshal(dealData, &loggableDeal); err != nil {
-				logger.Error(crawlerName, err)
-				continue
-			}
-			if _, exists := loggableDeal["thumbnail"]; exists {
-				loggableDeal["thumbnail"] = "OK"
-			}
-			loggableDealData, err := json.MarshalIndent(loggableDeal, "", "  ")
-			if err != nil {
-				logger.Error(crawlerName, err)
-				continue
-			}
-			logger.Debug("크롤링 데이터 %d: %s", i+1, string(loggableDealData))
+func (w *Worker) logDeals(deals []crawler.HotDeal, crawlerName string) {
+	if len(deals) == 0 {
+		return
+	}
+
+	for i, deal := range deals {
+		var loggableDeal map[string]interface{}
+		dealData, err := json.MarshalIndent(deal, "", "  ")
+		if err != nil {
+			logger.Error(crawlerName, err)
+			continue
 		}
+		if err := json.Unmarshal(dealData, &loggableDeal); err != nil {
+			logger.Error(crawlerName, err)
+			continue
+		}
+		if _, exists := loggableDeal["thumbnail"]; exists {
+			loggableDeal["thumbnail"] = "OK"
+		}
+		loggableDealData, err := json.MarshalIndent(loggableDeal, "", "  ")
+		if err != nil {
+			logger.Error(crawlerName, err)
+			continue
+		}
+		logger.Debug("크롤링 데이터 %d: %s", i+1, string(loggableDealData))
 	}
 }
