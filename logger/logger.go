@@ -8,13 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"sjsage522/hotdealworker/config"
-
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
-
-var logger zerolog.Logger
 
 // LogLevel represents the severity of a log message
 type LogLevel int
@@ -34,10 +29,22 @@ const (
 
 var (
 	// CurrentLevel is the current log level
-	CurrentLevel LogLevel = DEBUG
+	CurrentLevel LogLevel = DEBUG // 기본값을 DEBUG로 설정
 	// TimeFormat is the format used for timestamps
 	TimeFormat = time.RFC3339
 )
+
+// Init initializes the logger
+func Init() {
+	// 환경 변수에서 로그 레벨 가져오기
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel != "" {
+		SetLevelFromString(logLevel)
+	}
+
+	// 로그 레벨 정보 출력
+	Info("Logger initialized with level: %s", getLevelString(CurrentLevel))
+}
 
 // SetLevel sets the current log level
 func SetLevel(level LogLevel) {
@@ -62,64 +69,9 @@ func SetLevelFromString(level string) {
 	}
 }
 
-// Init initializes the zerolog logger
-func Init() {
-	// 환경 설정 가져오기
-	cfg := config.GetConfig()
-
-	// 시간 포맷 설정
-	zerolog.TimeFieldFormat = time.RFC3339
-
-	// 콘솔 출력 설정
-	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: time.RFC3339,
-		NoColor:    cfg.Environment == "production",
-	}
-
-	// 로거 설정
-	logger = zerolog.New(consoleWriter).
-		With().
-		Timestamp().
-		Caller().
-		Logger()
-
-	// 로그 레벨 설정 - 환경 변수에서 직접 가져옴
-	setLogLevel(cfg.LogLevel)
-
-	// 글로벌 로거 설정
-	log.Logger = logger
-
-	// 로그 레벨 정보 출력
-	Info("Logger initialized with level: %s", cfg.LogLevel)
-}
-
-// setLogLevel sets the log level based on a string
-func setLogLevel(level string) {
-	switch strings.ToLower(level) {
-	case "trace":
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	case "warn":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	case "fatal":
-		zerolog.SetGlobalLevel(zerolog.FatalLevel)
-	case "panic":
-		zerolog.SetGlobalLevel(zerolog.PanicLevel)
-	default:
-		// 기본값은 info
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-}
-
 // IsDebugEnabled returns true if debug logging is enabled
 func IsDebugEnabled() bool {
-	return zerolog.GlobalLevel() <= zerolog.DebugLevel
+	return CurrentLevel <= DEBUG
 }
 
 // Debug logs a debug message
@@ -197,6 +149,24 @@ func getLevelName(level LogLevel) string {
 		return "FTL"
 	default:
 		return "???"
+	}
+}
+
+// getLevelString returns the full string representation of a log level
+func getLevelString(level LogLevel) string {
+	switch level {
+	case DEBUG:
+		return "DEBUG"
+	case INFO:
+		return "INFO"
+	case WARN:
+		return "WARN"
+	case ERROR:
+		return "ERROR"
+	case FATAL:
+		return "FATAL"
+	default:
+		return "UNKNOWN"
 	}
 }
 

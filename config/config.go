@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -59,24 +61,18 @@ type Config struct {
 
 	// Environment
 	Environment string
-
-	// Logging
-	LogLevel string
 }
 
 // LoadConfig loads the configuration from environment variables with defaults
 func LoadConfig() Config {
+	// Load .env file if it exists
+	godotenv.Load()
+
 	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
 	crawlInterval, _ := strconv.Atoi(getEnv("CRAWL_INTERVAL_SECONDS", "60"))
 	redisStreamCount, _ := strconv.Atoi(getEnv("REDIS_STREAM_COUNT", "1"))
 	redisStreamMaxLength, _ := strconv.Atoi(getEnv("REDIS_STREAM_MAX_LENGTH", "500"))
 	environment := getEnv("HOTDEAL_ENVIRONMENT", "development")
-
-	// 기본 로그 레벨 설정 - 환경에 따라 다른 기본값 사용
-	defaultLogLevel := "debug"
-	if environment == "production" {
-		defaultLogLevel = "info"
-	}
 
 	return Config{
 		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
@@ -104,7 +100,6 @@ func LoadConfig() Config {
 		EomisaeURL:           getEnv("EOMISAE_URL", "https://eomisae.co.kr"),
 		ZodURL:               getEnv("ZOD_URL", "https://zod.kr"),
 		Environment:          environment,
-		LogLevel:             getEnv("LOG_LEVEL", defaultLogLevel),
 	}
 }
 

@@ -94,6 +94,7 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 
 func (w *Worker) logDeals(deals []crawler.HotDeal, crawlerName string) {
 	if len(deals) == 0 {
+		logger.Debug("No deals found for %s", crawlerName)
 		return
 	}
 
