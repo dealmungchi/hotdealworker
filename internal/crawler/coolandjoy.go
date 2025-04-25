@@ -80,6 +80,7 @@ func NewCoolandjoyCrawler(cfg config.Config, cacheSvc cache.CacheService) *Unifi
 			Link:              "a.na-subject",
 			Thumbnail:         "", // No thumbnail
 			PostedAt:          "div.float-left.float-md-none.d-md-table-cell.nw-6.nw-md-auto.f-sm.font-weight-normal.py-md-2.pr-md-1",
+			Category:          "div#abcd",
 			ThumbnailHandlers: []ElementHandler{thumbnailHandler},
 			PostedAtHandlers:  []ElementHandler{postedAtHandler},
 			PriceHandlers:     []ElementHandler{priceHandler},

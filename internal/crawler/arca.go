@@ -50,6 +50,7 @@ func NewArcaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 			Link:          "div.vrow-inner div.vrow-top.deal a.title.hybrid-title",
 			Thumbnail:     "a.title.preview-image div.vrow-preview img",
 			PostedAt:      "span.col-time time",
+			Category:      "span.badges a.badge",
 			PriceRegex:    `\(([0-9,]+원)\)$`,
 			TitleHandlers: []ElementHandler{titleHandler},
 			PriceHandlers: []ElementHandler{priceHandler},

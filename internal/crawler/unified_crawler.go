@@ -154,6 +154,15 @@ func (c *UnifiedCrawler) defaultPostedAtHandler(s *goquery.Selection) string {
 	return strings.TrimSpace(postedAtSel.Text())
 }
 
+func (c *UnifiedCrawler) defaultCategoryHandler(s *goquery.Selection) string {
+	categorySel := s.Find(c.Selectors.Category)
+	if categorySel.Length() == 0 {
+		return ""
+	}
+
+	return strings.TrimSpace(categorySel.Text())
+}
+
 // processDeal processes a single deal based on the configuration
 func (c *UnifiedCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 	// Skip if the element has a class to filter out
@@ -239,5 +248,12 @@ func (c *UnifiedCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 		postedAt = c.defaultPostedAtHandler(s)
 	}
 
-	return c.CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt), nil
+	var category string
+	if len(c.Selectors.CategoryHandlers) > 0 {
+		category = c.applyHandlers(s, c.Selectors.CategoryHandlers)
+	} else {
+		category = c.defaultCategoryHandler(s)
+	}
+
+	return c.CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt, category), nil
 }

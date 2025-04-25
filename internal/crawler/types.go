@@ -29,6 +29,7 @@ type HotDeal struct {
 	Thumbnail     string `json:"thumbnail,omitempty"`
 	ThumbnailLink string `json:"thumbnail_link,omitempty"`
 	PostedAt      string `json:"posted_at,omitempty"`
+	Category      string `json:"category,omitempty"`
 	Provider      string `json:"provider"`
 }
 
@@ -65,6 +66,7 @@ type Selectors struct {
 	Price       string
 	Thumbnail   string
 	PostedAt    string
+	Category    string
 	PriceRegex  string
 	ThumbRegex  string
 	ClassFilter string
@@ -75,6 +77,7 @@ type Selectors struct {
 	PriceHandlers     []ElementHandler
 	ThumbnailHandlers []ElementHandler
 	PostedAtHandlers  []ElementHandler
+	CategoryHandlers  []ElementHandler
 }
 
 // CrawlerConfig contains configuration for a crawler

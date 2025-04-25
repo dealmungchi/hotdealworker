@@ -19,6 +19,20 @@ func NewRuliwebCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 		return postedAt
 	}
 
+	categoryHandler := func(s *goquery.Selection) string {
+		element := s.Find("div.title_wrapper.subject.relative a")
+		if element.Length() == 0 {
+			return ""
+		}
+
+		firstTd := element.Eq(0)
+		if firstTd.Length() == 0 {
+			return ""
+		}
+
+		return strings.TrimSpace(firstTd.Text())
+	}
+
 	return NewUnifiedCrawler(CrawlerConfig{
 		URL:          cfg.RuliwebURL + "/market/board/1020?view=thumbnail&page=1",
 		CacheKey:     "ruliweb_rate_limited",
@@ -35,6 +49,7 @@ func NewRuliwebCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 			ThumbRegex:       `url\((?:['"]?)(.*?)(?:['"]?)\)`,
 			PriceRegex:       `\(([0-9,]+원)\)$`,
 			PostedAtHandlers: []ElementHandler{postedAtHandler},
+			CategoryHandlers: []ElementHandler{categoryHandler},
 		},
 		IDExtractor: func(link string) (string, error) {
 			baseLink := strings.Split(link, "?")[0]

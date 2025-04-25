@@ -33,6 +33,7 @@ func NewQuasarCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCr
 			Link:          "div.market-info-list-cont p.tit a.subject-link",
 			Thumbnail:     "div.market-info-list div.thumb-wrap a.thumb img.maxImg",
 			PostedAt:      "span.date",
+			Category:      "div.market-info-list-cont p span.category",
 			PriceHandlers: []ElementHandler{priceHandler},
 		},
 		IDExtractor: func(link string) (string, error) {

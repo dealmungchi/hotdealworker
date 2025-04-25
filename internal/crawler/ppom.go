@@ -42,6 +42,7 @@ func NewPpomCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 			Link:          "div.baseList-cover a.baseList-title",
 			Thumbnail:     "a.baseList-thumb img",
 			PostedAt:      "time.baseList-time",
+			Category:      "div.baseList-box small.baseList-small",
 			PriceRegex:    `\(([0-9,]+원)\)$`,
 			PriceHandlers: []ElementHandler{priceHandler},
 		},

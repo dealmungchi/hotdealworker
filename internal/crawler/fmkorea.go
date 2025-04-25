@@ -52,6 +52,7 @@ func NewFMKoreaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 			Link:          "h3.title a",
 			Thumbnail:     "a img.thumb",
 			PostedAt:      "div span.regdate",
+			Category:      "div span.category a",
 			PriceRegex:    `\(([0-9,]+원)\)$`,
 			TitleHandlers: []ElementHandler{titleCleanerHandler},
 			PriceHandlers: []ElementHandler{priceHandler},

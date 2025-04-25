@@ -355,7 +355,7 @@ func (c *BaseCrawler) ProcessImage(imageURL string) (string, string, error) {
 }
 
 // CreateDeal creates a HotDeal with the given properties
-func (c *BaseCrawler) CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt string) *HotDeal {
+func (c *BaseCrawler) CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt, category string) *HotDeal {
 	return &HotDeal{
 		Id:            id,
 		Title:         title,
@@ -364,6 +364,7 @@ func (c *BaseCrawler) CreateDeal(id, title, link, price, thumbnail, thumbnailLin
 		Thumbnail:     thumbnail,
 		ThumbnailLink: thumbnailLink,
 		PostedAt:      postedAt,
+		Category:      category,
 		Provider:      c.Provider,
 	}
 }

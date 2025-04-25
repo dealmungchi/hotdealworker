@@ -36,6 +36,20 @@ func NewBbasak(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 		return strings.TrimSpace(element.Text())
 	}
 
+	categoryCleanerHandler := func(s *goquery.Selection) string {
+		element := s.Find("td")
+		if element.Length() == 0 {
+			return ""
+		}
+
+		secondTd := element.Eq(1)
+		if secondTd.Length() == 0 {
+			return ""
+		}
+
+		return strings.TrimSpace(secondTd.Text())
+	}
+
 	return NewUnifiedCrawler(CrawlerConfig{
 		URL:          cfg.BbasakURL + "/bbs/board.php?bo_table=bbasak1",
 		CacheKey:     "bbasak_rate_limited",
@@ -53,6 +67,7 @@ func NewBbasak(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 			PriceRegex:       `([0-9,]+원)`,
 			TitleHandlers:    []ElementHandler{titleCleanerHandler},
 			PostedAtHandlers: []ElementHandler{postedAtCleanerHandler},
+			CategoryHandlers: []ElementHandler{categoryCleanerHandler},
 		},
 		IDExtractor: func(link string) (string, error) {
 			return helpers.GetSplitPart(link, "&wr_id=", 1)

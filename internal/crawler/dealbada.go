@@ -21,6 +21,7 @@ func NewDealbadaCrawler(cfg config.Config, cacheSvc cache.CacheService) *Unified
 			Link:        "td.td_subject a",
 			Thumbnail:   "td.td_img a img",
 			PostedAt:    "td.td_date",
+			Category:    "td.td_cate a.bo_cate_link",
 			PriceRegex:  `([0-9,]+원)`,
 			ClassFilter: "bo_notice best_article",
 		},

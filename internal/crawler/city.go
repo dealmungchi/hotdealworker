@@ -21,6 +21,7 @@ func NewCity(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 			Link:        "td.title a.hx",
 			Thumbnail:   "td a img.thumb_border",
 			PostedAt:    "td.time",
+			Category:    "td.cate span",
 			PriceRegex:  `([0-9,]+원)`,
 			ClassFilter: "notice",
 		},
