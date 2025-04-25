@@ -2,6 +2,24 @@ package crawler
 
 import "github.com/PuerkitoBio/goquery"
 
+const (
+	ProviderArca         = "Arca"
+	ProviderBbasak       = "Bbasak"
+	ProviderCity         = "City"
+	ProviderClien        = "Clien"
+	ProviderCoolandjoy   = "Coolandjoy"
+	ProviderDamoang      = "Damoang"
+	ProviderDealbada     = "Dealbada"
+	ProviderEomisae      = "Eomisae"
+	ProviderFMKorea      = "FMKorea"
+	ProviderMalltail     = "Malltail"
+	ProviderMissycoupons = "Missycoupons"
+	ProviderPpomEn       = "PpomEn"
+	ProviderPpom         = "Ppom"
+	ProviderQuasar       = "Quasar"
+	ProviderRuliweb      = "Ruliweb"
+)
+
 // HotDeal represents a scraped hot deal
 type HotDeal struct {
 	Id            string `json:"id"`

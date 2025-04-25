@@ -13,7 +13,7 @@ func NewPpomEnCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCr
 		CacheKey:     "ppom_en_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.PpomEnURL + "/zboard/",
-		Provider:     "PpomEn",
+		Provider:     ProviderPpomEn,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

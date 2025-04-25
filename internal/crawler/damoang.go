@@ -36,7 +36,7 @@ func NewDamoangCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 		CacheKey:     "damoang_rate_limited",
 		BlockTime:    300,
 		BaseURL:      cfg.DamoangURL,
-		Provider:     "Damoang",
+		Provider:     ProviderDamoang,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

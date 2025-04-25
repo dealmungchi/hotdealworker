@@ -60,7 +60,7 @@ func (w *Worker) runCrawlers() {
 
 	// Trim all streams after crawling
 	if err := w.publisher.TrimStreams(); err != nil {
-		logger.Error("StreamTrimming", err)
+		logger.Error("StreamTrimming: %v", err)
 	}
 }
 

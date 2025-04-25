@@ -12,7 +12,7 @@ func NewCity(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 		CacheKey:     "city_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.CityURL,
-		Provider:     "City",
+		Provider:     ProviderCity,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

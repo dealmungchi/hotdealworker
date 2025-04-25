@@ -41,7 +41,7 @@ func NewBbasak(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 		CacheKey:     "bbasak_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.BbasakURL,
-		Provider:     "Bbasak",
+		Provider:     ProviderBbasak,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

@@ -15,7 +15,7 @@ func NewClienCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCra
 		CacheKey:     "clien_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.ClienURL,
-		Provider:     "Clien",
+		Provider:     ProviderClien,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

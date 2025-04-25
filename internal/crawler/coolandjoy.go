@@ -71,7 +71,7 @@ func NewCoolandjoyCrawler(cfg config.Config, cacheSvc cache.CacheService) *Unifi
 		CacheKey:     "coolandjoy_rate_limited",
 		BlockTime:    300,
 		BaseURL:      cfg.CoolandjoyURL,
-		Provider:     "Coolandjoy",
+		Provider:     ProviderCoolandjoy,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

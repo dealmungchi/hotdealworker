@@ -12,7 +12,7 @@ func NewMissycoupons(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCra
 		CacheKey:     "missycoupons_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.MissycouponsURL + "/zero/",
-		Provider:     "Missycoupons",
+		Provider:     ProviderMissycoupons,
 		UseChrome:    true,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

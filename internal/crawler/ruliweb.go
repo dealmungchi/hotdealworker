@@ -24,7 +24,7 @@ func NewRuliwebCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 		CacheKey:     "ruliweb_rate_limited",
 		BlockTime:    300,
 		BaseURL:      cfg.RuliwebURL,
-		Provider:     "Ruliweb",
+		Provider:     ProviderRuliweb,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

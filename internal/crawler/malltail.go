@@ -12,7 +12,7 @@ func NewMalltail(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler
 		CacheKey:     "malltail_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.MalltailURL,
-		Provider:     "Malltail",
+		Provider:     ProviderMalltail,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

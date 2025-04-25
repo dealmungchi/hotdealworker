@@ -24,7 +24,7 @@ func NewQuasarCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCr
 		CacheKey:     "quasar_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.QuasarURL,
-		Provider:     "Quasar",
+		Provider:     ProviderQuasar,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

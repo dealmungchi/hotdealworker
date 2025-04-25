@@ -12,7 +12,7 @@ func NewEomisae(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler 
 		CacheKey:     "eomisae_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.EomisaeURL,
-		Provider:     "Eomisae",
+		Provider:     ProviderEomisae,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

@@ -12,7 +12,7 @@ func NewDealbadaCrawler(cfg config.Config, cacheSvc cache.CacheService) *Unified
 		CacheKey:     "dealbada_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.DealbadaURL,
-		Provider:     "Dealbada",
+		Provider:     ProviderDealbada,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

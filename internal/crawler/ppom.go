@@ -33,7 +33,7 @@ func NewPpomCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 		CacheKey:     "ppom_rate_limited",
 		BlockTime:    500,
 		BaseURL:      cfg.PpomURL + "/zboard/",
-		Provider:     "Ppom",
+		Provider:     ProviderPpom,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

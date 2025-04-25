@@ -41,7 +41,7 @@ func NewArcaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCraw
 		CacheKey:     "arca_rate_limited",
 		BlockTime:    300,
 		BaseURL:      cfg.ArcaURL,
-		Provider:     "Arca",
+		Provider:     ProviderArca,
 		UseChrome:    false,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{

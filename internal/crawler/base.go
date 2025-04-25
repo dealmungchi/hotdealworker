@@ -336,7 +336,16 @@ func (c *BaseCrawler) ProcessImage(imageURL string) (string, string, error) {
 		return "", "", nil
 	}
 
-	data, err := helpers.FetchSimply(imageURL)
+	var data []byte
+	var err error
+	if c.Provider == ProviderBbasak {
+		data, err = helpers.FetchSimply(imageURL, http.Header{
+			"Referer": []string{"https://bbasak.com/bbs/board.php?bo_table=bbasak1"},
+		})
+	} else {
+		data, err = helpers.FetchSimply(imageURL)
+	}
+
 	if err != nil {
 		logger.Error("Error fetching image: %v", err)
 		return "", "", nil

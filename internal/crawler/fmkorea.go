@@ -43,7 +43,7 @@ func NewFMKoreaCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedC
 		CacheKey:     "fmkorea_rate_limited",
 		BlockTime:    300,
 		BaseURL:      cfg.FMKoreaURL,
-		Provider:     "FMKorea",
+		Provider:     ProviderFMKorea,
 		UseChrome:    true,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{
