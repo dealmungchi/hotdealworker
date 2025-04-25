@@ -9,9 +9,14 @@ import (
 	"sjsage522/hotdealworker/services/cache"
 	"sjsage522/hotdealworker/services/publisher"
 	"sjsage522/hotdealworker/services/worker"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file if it exists
+	godotenv.Load()
+
 	// Load configuration
 	cfg := config.LoadConfig()
 

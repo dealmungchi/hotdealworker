@@ -42,9 +42,7 @@ func (w *Worker) Start() {
 		start := time.Now()
 		w.runCrawlers()
 		elapsed := time.Since(start)
-		if os.Getenv("HOTDEAL_ENVIRONMENT") != "production" {
-			logger.Info("크롤링 소요 시간: %s", elapsed)
-		}
+		logger.Info("크롤링 소요 시간: %s", elapsed)
 		time.Sleep(w.crawlInterval)
 	}
 }
