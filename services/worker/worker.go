@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/internal/crawler"
+	"sjsage522/hotdealworker/logger"
 	"sjsage522/hotdealworker/services/publisher"
 )
 
@@ -18,7 +18,6 @@ type Worker struct {
 	ctx           context.Context
 	crawlers      []crawler.Crawler
 	publisher     publisher.Publisher
-	logger        helpers.LoggerInterface
 	crawlInterval time.Duration
 }
 
@@ -27,14 +26,12 @@ func NewWorker(
 	ctx context.Context,
 	crawlers []crawler.Crawler,
 	pub publisher.Publisher,
-	logger helpers.LoggerInterface,
 	crawlInterval time.Duration,
 ) *Worker {
 	return &Worker{
 		ctx:           ctx,
 		crawlers:      crawlers,
 		publisher:     pub,
-		logger:        logger,
 		crawlInterval: crawlInterval,
 	}
 }
@@ -46,7 +43,7 @@ func (w *Worker) Start() {
 		w.runCrawlers()
 		elapsed := time.Since(start)
 		if os.Getenv("HOTDEAL_ENVIRONMENT") != "production" {
-			w.logger.LogInfo("크롤링 소요 시간: %s", elapsed)
+			logger.Info("크롤링 소요 시간: %s", elapsed)
 		}
 		time.Sleep(w.crawlInterval)
 	}
@@ -66,7 +63,7 @@ func (w *Worker) runCrawlers() {
 
 	// Trim all streams after crawling
 	if err := w.publisher.TrimStreams(); err != nil {
-		w.logger.LogError("StreamTrimming", err)
+		logger.Error("StreamTrimming", err)
 	}
 }
 
@@ -79,41 +76,47 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) {
 
 	deals, err := c.FetchDeals()
 	if err != nil {
-		w.logger.LogError(crawlerName, err)
+		logger.Error(crawlerName, err)
 		return
 	}
 
 	for _, deal := range deals {
 		dealData, err := json.Marshal(deal)
 		if err != nil {
-			w.logger.LogError(crawlerName, err)
+			logger.Error(crawlerName, err)
 			return
 		}
 
 		if err := w.publisher.Publish(c.GetProvider(), dealData); err != nil {
-			w.logger.LogError(crawlerName, err)
+			logger.Error(crawlerName, err)
 		}
-
-		w.newMethod(deal, deals, dealData, crawlerName)
 	}
+
+	w.newMethod(deals, crawlerName)
 }
 
-func (w *Worker) newMethod(deal crawler.HotDeal, deals []crawler.HotDeal, dealData []byte, crawlerName string) {
+func (w *Worker) newMethod(deals []crawler.HotDeal, crawlerName string) {
 	if os.Getenv("HOTDEAL_ENVIRONMENT") != "production" {
-		// Log only the first deal for each provider
-		if deal == deals[0] {
+		for i, deal := range deals[:5] {
 			var loggableDeal map[string]interface{}
+			dealData, err := json.MarshalIndent(deal, "", "  ")
+			if err != nil {
+				logger.Error(crawlerName, err)
+				continue
+			}
 			if err := json.Unmarshal(dealData, &loggableDeal); err != nil {
-				w.logger.LogError(crawlerName, err)
+				logger.Error(crawlerName, err)
+				continue
 			}
 			if _, exists := loggableDeal["thumbnail"]; exists {
 				loggableDeal["thumbnail"] = "OK"
 			}
-			loggableDealData, err := json.Marshal(loggableDeal)
+			loggableDealData, err := json.MarshalIndent(loggableDeal, "", "  ")
 			if err != nil {
-				w.logger.LogError(crawlerName, err)
+				logger.Error(crawlerName, err)
+				continue
 			}
-			w.logger.LogInfo("크롤링 데이터: %s", string(loggableDealData))
+			logger.Debug("크롤링 데이터 %d: %s", i+1, string(loggableDealData))
 		}
 	}
 }

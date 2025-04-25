@@ -2,10 +2,10 @@ package crawler
 
 import (
 	"io"
-	"log"
 	"strings"
 	"time"
 
+	"sjsage522/hotdealworker/logger"
 	"sjsage522/hotdealworker/services/cache"
 
 	"github.com/PuerkitoBio/goquery"
@@ -38,10 +38,10 @@ func NewUnifiedCrawler(config CrawlerConfig, cacheSvc cache.CacheService) *Unifi
 
 	// 크롤러 타입에 따라 fetch 함수 설정
 	if config.UseChrome && unified.ChromeDBAddr != "" {
-		log.Printf("DEBUG: Using ChromeDB for %s", config.Provider)
+		logger.Debug("Using ChromeDB for %s", config.Provider)
 		unified.fetchFunc = unified.fetchWithChromeDB
 	} else {
-		log.Printf("DEBUG: Using standard fetch for %s", config.Provider)
+		logger.Debug("Using standard fetch for %s", config.Provider)
 		unified.fetchFunc = unified.fetchWithCache
 	}
 

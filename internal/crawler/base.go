@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"sjsage522/hotdealworker/helpers"
+	"sjsage522/hotdealworker/logger"
 	"sjsage522/hotdealworker/services/cache"
 
 	"github.com/PuerkitoBio/goquery"
@@ -85,11 +85,11 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 			evalBytes, _ := io.ReadAll(evalResp.Body)
 
 			if len(evalBytes) > 0 {
-				fmt.Printf("DEBUG: Eval endpoint successful, got %d bytes\n", len(evalBytes))
+				logger.Debug("Eval endpoint successful, got %d bytes", len(evalBytes))
 				var result map[string]interface{}
 				if err := json.Unmarshal(evalBytes, &result); err == nil {
 					if data, ok := result["data"].(string); ok && len(data) > 0 {
-						fmt.Printf("DEBUG: Found HTML in evaluate result\n")
+						logger.Debug("Found HTML in evaluate result")
 						return strings.NewReader(data), nil
 					}
 				}
@@ -177,7 +177,7 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 		funcBytes, _ := io.ReadAll(funcResp.Body)
 
 		if len(funcBytes) > 0 {
-			fmt.Printf("DEBUG: Function endpoint returned %d bytes\n", len(funcBytes))
+			logger.Debug("Function endpoint returned %d bytes", len(funcBytes))
 			return bytes.NewReader(funcBytes), nil
 		}
 	}
@@ -192,7 +192,7 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 		scrapeBytes, _ := io.ReadAll(scrapeResp.Body)
 
 		if len(scrapeBytes) > 0 {
-			fmt.Printf("DEBUG: Scrape endpoint returned %d bytes\n", len(scrapeBytes))
+			logger.Debug("Scrape endpoint returned %d bytes", len(scrapeBytes))
 			return bytes.NewReader(scrapeBytes), nil
 		}
 	}
@@ -201,7 +201,7 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 	if c.CacheSvc != nil && c.CacheKey != "" {
 		shortBlockTime := 30 * time.Second
 		if setErr := c.CacheSvc.Set(c.CacheKey, []byte("30"), shortBlockTime); setErr != nil {
-			fmt.Printf("DEBUG: Failed to set rate limit cache: %v\n", setErr)
+			logger.Debug("Failed to set rate limit cache: %v", setErr)
 		}
 	}
 
@@ -233,7 +233,7 @@ func (c *BaseCrawler) processDeals(selections *goquery.Selection, processor Proc
 				// Log the error but continue processing other deals
 				// We don't return the error because it would stop all crawling
 				// Instead, we just skip this deal
-				log.Printf("[%s] Error processing deal: %v", c.Provider, err)
+				logger.Error("[%s] Error processing deal: %v", c.Provider, err)
 				return
 			}
 
@@ -301,13 +301,13 @@ func (c *BaseCrawler) ResolveURL(href string) string {
 
 	base, err := url.Parse(baseURL)
 	if err != nil {
-		log.Printf("Error parsing base URL '%s': %v", baseURL, err)
+		logger.Error("Error parsing base URL '%s': %v", baseURL, err)
 		return href
 	}
 
 	ref, err := url.Parse(href)
 	if err != nil {
-		log.Printf("Error parsing href '%s': %v", href, err)
+		logger.Error("Error parsing href '%s': %v", href, err)
 		return href
 	}
 
@@ -338,7 +338,7 @@ func (c *BaseCrawler) ProcessImage(imageURL string) (string, string, error) {
 
 	data, err := helpers.FetchSimply(imageURL)
 	if err != nil {
-		log.Printf("Error fetching image: %v", err)
+		logger.Error("Error fetching image: %v", err)
 		return "", "", nil
 	}
 
@@ -371,4 +371,9 @@ func (c *BaseCrawler) ExtractURLFromStyle(style string) string {
 func isLikelyDomainURL(href string) bool {
 	domainLike := regexp.MustCompile(`^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/|$)`)
 	return domainLike.MatchString(href)
+}
+
+// Debug logs a debug message
+func (b *BaseCrawler) Debug(format string, v ...interface{}) {
+	logger.Debug("[%s] "+format, append([]interface{}{b.GetName()}, v...)...)
 }

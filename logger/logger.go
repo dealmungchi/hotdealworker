@@ -1,4 +1,4 @@
-package helpers
+package logger
 
 import (
 	"os"
@@ -13,8 +13,8 @@ import (
 
 var logger zerolog.Logger
 
-// InitLogger initializes the zerolog logger
-func InitLogger() {
+// Init initializes the zerolog logger
+func Init() {
 	// 환경 설정 가져오기
 	cfg := config.GetConfig()
 

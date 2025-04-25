@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"sjsage522/hotdealworker/config"
-	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/internal/crawler"
+	"sjsage522/hotdealworker/logger"
 	"sjsage522/hotdealworker/services/cache"
 	"sjsage522/hotdealworker/services/publisher"
 	"sjsage522/hotdealworker/services/worker"
@@ -20,7 +19,13 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize logger
-	logger := helpers.NewLogger("./error")
+	logger.Init()
+
+	// 로그 출력 테스트
+	logger.Info("Starting application in %s environment", cfg.Environment)
+
+	// 디버그 로그 예시
+	logger.Debug("This is a debug message that will only appear if log level is debug or lower")
 
 	// Initialize cache service
 	cacheService := cache.NewMemcacheService(cfg.MemcacheAddr)
@@ -44,10 +49,9 @@ func main() {
 		ctx,
 		crawlers,
 		redisPublisher,
-		logger,
 		cfg.CrawlInterval,
 	)
 
-	log.Printf("Starting hot deal worker... in %s environment", cfg.Environment)
+	logger.Info("Starting hot deal worker in %s environment", cfg.Environment)
 	w.Start()
 }
