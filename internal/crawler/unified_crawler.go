@@ -38,10 +38,10 @@ func NewUnifiedCrawler(config CrawlerConfig, cacheSvc cache.CacheService) *Unifi
 
 	// 크롤러 타입에 따라 fetch 함수 설정
 	if config.UseChrome && unified.ChromeDBAddr != "" {
-		logger.Debug("Using ChromeDB for %s", config.Provider)
+		logger.Info("Using ChromeDB for %s", config.Provider)
 		unified.fetchFunc = unified.fetchWithChromeDB
 	} else {
-		logger.Debug("Using standard fetch for %s", config.Provider)
+		logger.Info("Using standard fetch for %s", config.Provider)
 		unified.fetchFunc = unified.fetchWithCache
 	}
 
