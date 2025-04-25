@@ -20,7 +20,7 @@ func NewClienCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCra
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{
 			DealList:    "div.list_item.symph_row.jirum",
-			Title:       "span.list_subject a",
+			Title:       "span.list_subject",
 			Link:        "a[data-role='list-title-text']",
 			Thumbnail:   "div.list_img a.list_thumbnail img",
 			PostedAt:    "div.list_time span.time.popover span.timestamp",
