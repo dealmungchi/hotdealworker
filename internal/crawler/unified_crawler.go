@@ -255,5 +255,9 @@ func (c *UnifiedCrawler) processDeal(s *goquery.Selection) (*HotDeal, error) {
 		category = c.defaultCategoryHandler(s)
 	}
 
+	if category != "" {
+		category = classifyCategory(category)
+	}
+
 	return c.CreateDeal(id, title, link, price, thumbnail, thumbnailLink, postedAt, category), nil
 }
