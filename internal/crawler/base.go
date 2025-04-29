@@ -389,6 +389,10 @@ func (b *BaseCrawler) Debug(format string, v ...interface{}) {
 }
 
 func classifyCategory(category string) string {
+	if category == "" {
+		return "기타"
+	}
+
 	mapping := map[string][]string{
 		"전자제품/디지털/PC/하드웨어": {
 			"PC/하드웨어", "PC관련", "컴퓨터", "디지털", "PC제품", "전자제품", "가전제품", "가전", "모바일", "노트북/모바일", "휴대폰", "A/V", "VR", "게임H/W",

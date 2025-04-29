@@ -29,7 +29,7 @@ type HotDeal struct {
 	Thumbnail     string `json:"thumbnail,omitempty"`
 	ThumbnailLink string `json:"thumbnail_link,omitempty"`
 	PostedAt      string `json:"posted_at,omitempty"`
-	Category      string `json:"category,omitempty"`
+	Category      string `json:"category"`
 	Provider      string `json:"provider"`
 }
 
