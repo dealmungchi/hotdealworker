@@ -77,6 +77,7 @@ func NewZod(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 			Title:         "a.tw-flex-1 div.tw-flex-1 div.app-list-title.tw-flex-wrap span.tw-mr-1.app-list-title-item",
 			Link:          "a.tw-flex-1",
 			Thumbnail:     "a.tw-flex-1 div.app-thumbnail img",
+			Category:      "span.zod-board--deal-meta-category",
 			ClassFilter:   "notice zod-board-list-deal-ended",
 			PriceHandlers: []ElementHandler{priceHandler},
 		},
