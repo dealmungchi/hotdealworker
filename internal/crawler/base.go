@@ -448,7 +448,7 @@ func classifyCategory(category string) string {
 	// 매핑 돌면서 포함 여부 체크
 	for bigCategory, keywords := range mapping {
 		for _, keyword := range keywords {
-			if strings.Contains(category, keyword) {
+			if strings.Contains(category, keyword) || strings.Contains(keyword, category) {
 				return bigCategory
 			}
 		}
