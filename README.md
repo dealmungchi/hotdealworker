@@ -1,273 +1,135 @@
 # HotDeal Worker
 
-A robust Go application that crawls multiple e-commerce and community websites for hot deals and publishes them to Redis streams in real-time.
+핫딜 정보를 크롤링하여 Redis Stream으로 발행하는 Go 워커 애플리케이션입니다.
 
-## Key Features
+## 특징
 
-- **Concurrent Multi-site Crawling**: Parallel processing of multiple hot deal sites
-- **Rate Limiting Prevention**: Effective crawling speed control using Memcached
-- **Flexible Crawler Architecture**: Configuration-driven crawlers that reuse common functionality
-- **Headless Browser Support**: Processing for sites requiring JavaScript execution
-- **Redis Stream Publishing**: Scalable real-time data distribution
-- **Memory Optimization**: Automatic stream trimming for efficient memory management
+- 다양한 핫딜 사이트 지원 (16개 사이트)
+- 병렬 크롤링
+- Memcache를 이용한 Rate Limiting
+- Redis Stream을 통한 실시간 데이터 발행
+- ChromeDB 지원 (JavaScript 렌더링이 필요한 사이트)
+- 로깅 (zerolog)
+- Graceful Shutdown
+- 환경 변수 기반 설정
 
-## Supported Sites
+## 아키텍처
 
-| Site | Status | URL |
-|------|--------|-----|
-| FMKorea(펨코) | Supported | https://www.fmkorea.com |
-| Damoang(다모앙) | Supported | https://damoang.net |
-| Arca Live(아카라이브) | Supported | https://arca.live |
-| Quasar Zone(퀘이사존) | Supported | https://quasarzone.com |
-| Coolandjoy(쿨앤조이) | Supported | https://coolenjoy.net |
-| Clien(클리앙) | Supported | https://www.clien.net |
-| Ppomppu(뽐뿌) | Supported | https://www.ppomppu.co.kr |
-| Ppomppu English(해외뽐뿌) | Supported | https://www.ppomppu.co.kr |
-| Ruliweb(루리웹) | Supported | https://bbs.ruliweb.com |
-| Dealbada(딜바다) | Supported | https://www.dealbada.com |
-| Missycoupons(미씨쿠폰) | Supported | https://www.missycoupons.com |
-| Malltail(몰테일) | Supported | https://post.malltail.com |
-| Bbasak(빠삭) | Supported | https://bbasak.com |
-| City(시티) | Supported | https://www.city.kr |
-| Eomisae(어미새) | Supported | https://eomisae.co.kr |
-| Zod(조드) | Supported | https://zod.kr |
+### 디렉토리 구조
 
-## Environment Variables
+```
+.
+├── config/             # 설정 관리
+├── internal/
+│   └── crawler/       # 크롤러 구현
+├── pkg/
+│   └── errors/        # 커스텀 에러 타입
+├── services/
+│   ├── cache/         # Memcache 서비스
+│   ├── publisher/     # Redis 발행 서비스
+│   └── worker/        # 워커 서비스
+├── helpers/           # 유틸리티 함수
+└── logger/            # 로깅 서비스
+```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| REDIS_ADDR | Redis server address | localhost:6379 |
-| REDIS_DB | Redis database number | 0 |
-| REDIS_STREAM | Redis stream prefix | streamHotdeals |
-| REDIS_STREAM_COUNT | Redis stream count | 1 |
-| REDIS_STREAM_MAX_LENGTH | Maximum entries per Redis stream | 500 |
-| MEMCACHE_ADDR | Memcached server address | localhost:11211 |
-| CRAWL_INTERVAL_SECONDS | Crawling interval in seconds | 60 |
-| USE_CHROME_DB | Enable headless browser for JavaScript sites | false |
-| CHROME_DB_ADDR | ChromeDB service address | http://localhost:3000 |
-| *_URL | Site-specific crawling URLs | Default site URLs |
+### 주요 컴포넌트
 
-## Installation and Usage
+- **Worker**: 크롤링 주기 관리 및 조정
+- **Crawler**: 각 사이트별 크롤링 로직
+- **Publisher**: Redis Stream으로 데이터 발행
+- **Cache**: Rate Limiting을 위한 캐시
 
-### Basic Setup
+## 설치 및 실행
+
+### 사전 요구사항
+
+- Go 1.24.1 이상
+- Redis
+- Memcache
+- ChromeDB (선택사항)
+
+### 환경 변수
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/hotdealworker.git
-cd hotdealworker
+# Redis 설정
+REDIS_ADDR=localhost:6379
+REDIS_DB=0
+REDIS_STREAM=streamHotdeals
+REDIS_STREAM_COUNT=1
+REDIS_STREAM_MAX_LENGTH=500
 
-# Install dependencies
-go mod download
+# Memcache 설정
+MEMCACHE_ADDR=localhost:11211
 
-# Build
+# 크롤링 설정
+CRAWL_INTERVAL_SECONDS=60
+USE_CHROME_DB=false
+CHROME_DB_ADDR=http://localhost:3000
+
+# 환경 설정
+HOTDEAL_ENVIRONMENT=development
+LOG_LEVEL=debug
+
+# 크롤러 활성화 (기본값: true)
+CRAWLER_FMKOREA_ENABLED=true
+CRAWLER_DAMOANG_ENABLED=true
+# ... 기타 크롤러 설정
+```
+
+### 실행
+
+```bash
+# 개발 환경
+go run main.go
+
+# 프로덕션 환경
 go build -o hotdealworker
-
-# Run
 ./hotdealworker
+
+# Docker
+docker-compose up
 ```
 
-### Docker Deployment
+## 지원 사이트
+
+- FM Korea
+- 다모앙
+- 아카라이브
+- 퀘이사존
+- 쿨앤조이
+- 클리앙
+- 뽐뿌
+- 루리웹
+- 딜바다
+- 미씨쿠폰
+- 몰테일
+- 빠삭
+- 시티
+- 어미새
+- ZOD
+
+## 개발
+
+### 테스트
 
 ```bash
-# Run with Docker Compose
-docker compose up -d
+# 단위 테스트
+go test ./...
+
+# 통합 테스트 (Redis/Memcache 필요)
+go test -v ./integration_test.go
 ```
 
-## Message Structure
+### 새로운 크롤러 추가
 
-Messages published to Redis are Base64-encoded JSON arrays with the following structure:
+1. `internal/crawler/` 디렉토리에 새로운 크롤러 파일 생성
+2. `UnifiedCrawler`를 사용하여 구현
+3. `factory.go`에 크롤러 생성자 추가
+4. 환경 변수에 URL 및 활성화 설정 추가
 
-```json
-[
-  {
-    "id": "1",
-    "title": "Product Name",
-    "link": "Product Link",
-    "price": "Price",
-    "thumbnail": "Thumbnail Image (Base64encoded)",
-    "posted_at": "Posted DateTime",
-    "provider": "Provider"
-  },
-  ...
-]
-```
+## 모니터링
+- 크롤링 주기별 성능 (소요 시간, 수집된 딜 수)
+- 크롤러별 성공/실패 상태
+- Rate Limiting 발생
+- Redis 발행 상태
 
-## Testing
-
-```bash
-# Run all tests
-make test
-
-# Run unit tests only
-make unit-test
-
-# Run integration tests only
-make integration-test
-```
-
-## Project Structure
-
-- `config/`: Application configuration
-- `services/`: Service layer (cache, publisher, worker)
-- `internal/crawler/`: Crawler interface and implementations
-- `helpers/`: Utility functions (HTTP, logging, etc.)
-
-## Architecture
-
-### Streaming Architecture
-
-HotDeal Worker uses Redis Streams for publishing hot deal data:
-
-1. **Multiple Streams**: Distributes data across multiple Redis Streams for improved load balancing
-   - `REDIS_STREAM_COUNT` configuration controls number of streams
-   - Messages are randomly assigned to streams
-
-2. **Stream Trimming**: Automatically manages memory usage
-   - Each stream is trimmed after every crawling cycle
-   - `REDIS_STREAM_MAX_LENGTH` controls maximum entries per stream
-   - Prevents unbounded growth of Redis memory usage
-
-3. **Base64 Encoding**: All messages are Base64 encoded for consistent storage
-   - Preserves binary data and special characters
-   - Simplifies client processing
-
-### Crawler Architecture
-
-HotDeal Worker implements a modular crawler architecture:
-
-1. **BaseCrawler**: Provides shared functionality across all crawlers
-   - Rate limiting handling
-   - URL resolution (relative to absolute)
-   - Thumbnail image processing
-   - Price extraction
-
-2. **UnifiedCrawler**: Flexible configuration-driven crawler
-   - Create site-specific crawlers through configuration
-   - CSS selector-based operation
-   - Support for custom handlers and element transformations
-   - Reusable modular components
-
-3. **Chrome-Enabled Crawling**: Headless browser-based crawler
-   - Handles sites requiring JavaScript execution
-   - Uses ChromeDB for page rendering
-   - Processes fully rendered DOM content
-   - Configurable with same selector approach as standard crawlers
-
-4. **Site-Specific Crawlers**: Handle unique site requirements
-   - Each crawler in separate file for better organization
-   - Configuration-based approach for reusing common logic
-   - Custom handlers for special extraction requirements
-   - Option to use either standard HTTP or Chrome-based crawling
-
-### Adding a New Crawler
-
-To add a new crawler:
-
-1. Create a new file in `internal/crawler` named after the site (e.g., `mynewsite.go`)
-2. Implement a constructor function that returns a `UnifiedCrawler`:
-
-```go
-package crawler
-
-import (
-	"strings"
-
-	"sjsage522/hotdealworker/config"
-	"sjsage522/hotdealworker/helpers"
-	"sjsage522/hotdealworker/services/cache"
-)
-
-// NewMySiteCrawler creates a crawler for MySite
-func NewMySiteCrawler(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
-	return NewUnifiedCrawler(CrawlerConfig{
-		URL:          cfg.MySiteURL, // Add to config struct
-		CacheKey:     "mysite_rate_limited",
-		BlockTime:    500,
-		BaseURL:      "https://www.mysite.com",
-		Provider:     "MySite",
-		UseChrome:    false, // Use standard HTTP crawler
-		ChromeDBAddr: cfg.ChromeDBAddr, // For sites requiring JavaScript
-		Selectors: Selectors{
-			DealList:    "div.deal-list div.item",
-			Title:       "h3.title",
-			Link:        "a.deal-link",
-			Thumbnail:   "img.thumbnail",
-			PostedAt:    "span.date",
-			PriceRegex:  `\$([0-9,.]+)`,
-			ThumbRegex:  ``, // If needed
-			ClassFilter: "", // Optional: filter out items with this class
-		},
-		IDExtractor: func(link string) (string, error) {
-			return helpers.GetSplitPart(link, "/", 5)
-		},
-	}, cacheSvc)
-}
-```
-
-3. Add the crawler to `factory.go`:
-
-```go
-func CreateCrawlers(cfg config.Config, cacheSvc cache.CacheService) []Crawler {
-	crawlers := []Crawler{}
-	
-	// Add existing crawlers
-	crawlers = append(crawlers, NewClienCrawler(cfg, cacheSvc))
-	// ...
-	
-	// Add your new crawler
-	crawlers = append(crawlers, NewMySiteCrawler(cfg, cacheSvc))
-
-	return crawlers
-}
-```
-
-4. Add the site URL to `config.go` and environment variables
-
-### Custom Element Handlers
-
-For sites with complex HTML structures, you can add custom element handlers to the `Selectors` struct:
-
-```go
-Selectors: Selectors{
-    DealList:    "div.deal-list div.item",
-    Title:       "h3.title",
-    Link:        "a.deal-link",
-    Thumbnail:   "img.thumbnail",
-    PostedAt:    "span.date",
-    PriceRegex:  `\$([0-9,.]+)`,
-    
-    // Custom handlers for specific elements
-    TitleHandlers: []ElementHandler{
-        func(s *goquery.Selection) string {
-            // Custom logic for title extraction
-            mainTitle := s.Find(".main-title").Text()
-            subTitle := s.Find(".subtitle").Text()
-            return strings.TrimSpace(mainTitle + " - " + subTitle)
-        },
-    },
-    PostedAtHandlers: []ElementHandler{
-        func(s *goquery.Selection) string {
-            // Custom date handling
-            rawDate := s.Find(".date-field").Text()
-            if strings.Contains(rawDate, "ago") {
-                // Convert relative date to absolute
-                return convertRelativeDate(rawDate)
-            }
-            return strings.TrimSpace(rawDate)
-        },
-    },
-}
-```
-
-### Scalability Benefits
-
-This architecture provides several advantages:
-
-- **Easy Site Addition**: Add new crawlers using just configuration
-- **Improved Maintainability**: Reuse shared logic and eliminate duplication
-- **High Extensibility**: Custom handlers and transformers for special cases
-- **Testable Design**: Easy testing with configuration-based crawling
-
-## License
-
-MIT License

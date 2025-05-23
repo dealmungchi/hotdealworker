@@ -1,204 +1,219 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
-// LogLevel represents the severity of a log message
-type LogLevel int
+// Logger represents a structured logger
+type Logger struct {
+	logger zerolog.Logger
+}
 
-const (
-	// DEBUG level for detailed information
-	DEBUG LogLevel = iota
-	// INFO level for general operational information
-	INFO
-	// WARN level for warning messages
-	WARN
-	// ERROR level for error messages
-	ERROR
-	// FATAL level for critical errors that cause the program to exit
-	FATAL
-)
+// Fields represents log fields
+type Fields map[string]interface{}
 
 var (
-	// CurrentLevel is the current log level
-	CurrentLevel LogLevel = DEBUG // 기본값을 DEBUG로 설정
-	// TimeFormat is the format used for timestamps
-	TimeFormat = time.RFC3339
+	// Default is the default logger instance
+	Default *Logger
 )
 
-// Init initializes the logger
+// Init initializes the logger with the given configuration
 func Init() {
-	// 환경 변수에서 로그 레벨 가져오기
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel != "" {
-		SetLevelFromString(logLevel)
+	level := getLogLevel()
+
+	// Configure zerolog
+	zerolog.TimeFieldFormat = time.RFC3339
+	zerolog.SetGlobalLevel(level)
+
+	// Create console writer for development
+	output := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.RFC3339,
 	}
 
-	// 로그 레벨 정보 출력
-	Info("Logger initialized with level: %s", getLevelString(CurrentLevel))
+	// Create logger
+	logger := zerolog.New(output).With().Timestamp().Logger()
+
+	Default = &Logger{logger: logger}
+
+	Default.Info().
+		Str("level", level.String()).
+		Msg("Logger initialized")
 }
 
-// SetLevel sets the current log level
-func SetLevel(level LogLevel) {
-	CurrentLevel = level
-}
-
-// SetLevelFromString sets the log level from a string
-func SetLevelFromString(level string) {
-	switch strings.ToUpper(level) {
-	case "DEBUG":
-		CurrentLevel = DEBUG
-	case "INFO":
-		CurrentLevel = INFO
-	case "WARN":
-		CurrentLevel = WARN
-	case "ERROR":
-		CurrentLevel = ERROR
-	case "FATAL":
-		CurrentLevel = FATAL
-	default:
-		CurrentLevel = INFO
+// getLogLevel returns the log level from environment variable
+func getLogLevel() zerolog.Level {
+	levelStr := os.Getenv("LOG_LEVEL")
+	if levelStr == "" {
+		levelStr = os.Getenv("HOTDEAL_ENVIRONMENT")
+		if levelStr == "production" {
+			return zerolog.InfoLevel
+		}
+		return zerolog.DebugLevel
 	}
+
+	level, err := zerolog.ParseLevel(levelStr)
+	if err != nil {
+		return zerolog.InfoLevel
+	}
+	return level
 }
 
-// IsDebugEnabled returns true if debug logging is enabled
-func IsDebugEnabled() bool {
-	return CurrentLevel <= DEBUG
+// WithContext creates a new logger with context
+func (l *Logger) WithContext(ctx context.Context) *Logger {
+	return &Logger{logger: zerolog.Ctx(ctx).With().Logger()}
 }
+
+// WithFields creates a new logger with fields
+func (l *Logger) WithFields(fields Fields) *Logger {
+	newLogger := l.logger.With()
+	for k, v := range fields {
+		newLogger = newLogger.Interface(k, v)
+	}
+	return &Logger{logger: newLogger.Logger()}
+}
+
+// WithField creates a new logger with a single field
+func (l *Logger) WithField(key string, value interface{}) *Logger {
+	return &Logger{logger: l.logger.With().Interface(key, value).Logger()}
+}
+
+// Debug returns a debug event
+func (l *Logger) Debug() *zerolog.Event {
+	return l.logger.Debug()
+}
+
+// Info returns an info event
+func (l *Logger) Info() *zerolog.Event {
+	return l.logger.Info()
+}
+
+// Warn returns a warn event
+func (l *Logger) Warn() *zerolog.Event {
+	return l.logger.Warn()
+}
+
+// Error returns an error event
+func (l *Logger) Error() *zerolog.Event {
+	return l.logger.Error()
+}
+
+// Fatal returns a fatal event
+func (l *Logger) Fatal() *zerolog.Event {
+	return l.logger.Fatal()
+}
+
+// WithError adds an error to the logger
+func (l *Logger) WithError(err error) *Logger {
+	return &Logger{logger: l.logger.With().Err(err).Logger()}
+}
+
+// Global functions for backward compatibility
 
 // Debug logs a debug message
 func Debug(format string, v ...interface{}) {
-	if CurrentLevel <= DEBUG {
-		logWithCaller(DEBUG, format, v...)
+	if Default == nil {
+		Init()
 	}
+	Default.Debug().Msgf(format, v...)
 }
 
 // Info logs an info message
 func Info(format string, v ...interface{}) {
-	if CurrentLevel <= INFO {
-		logWithCaller(INFO, format, v...)
+	if Default == nil {
+		Init()
 	}
+	Default.Info().Msgf(format, v...)
 }
 
 // Warn logs a warning message
 func Warn(format string, v ...interface{}) {
-	if CurrentLevel <= WARN {
-		logWithCaller(WARN, format, v...)
+	if Default == nil {
+		Init()
 	}
+	Default.Warn().Msgf(format, v...)
 }
 
 // Error logs an error message
 func Error(format string, v ...interface{}) {
-	if CurrentLevel <= ERROR {
-		logWithCaller(ERROR, format, v...)
+	if Default == nil {
+		Init()
 	}
+	Default.Error().Msgf(format, v...)
 }
 
 // Fatal logs a fatal message and exits
 func Fatal(format string, v ...interface{}) {
-	if CurrentLevel <= FATAL {
-		logWithCaller(FATAL, format, v...)
-		os.Exit(1)
+	if Default == nil {
+		Init()
 	}
+	Default.Fatal().Msgf(format, v...)
 }
 
-// logWithCaller logs a message with caller information
-func logWithCaller(level LogLevel, format string, v ...interface{}) {
-	// Get caller information (skip 2 frames to get the actual caller)
-	_, file, line, ok := runtime.Caller(2)
-	callerInfo := "unknown"
-	if ok {
-		// Extract just the filename and directory
-		file = filepath.Base(filepath.Dir(file)) + "/" + filepath.Base(file)
-		callerInfo = fmt.Sprintf("%s:%d", file, line)
+// IsDebugEnabled returns true if debug logging is enabled
+func IsDebugEnabled() bool {
+	if Default == nil {
+		Init()
 	}
-
-	// Format the message
-	message := fmt.Sprintf(format, v...)
-
-	// Get the level name
-	levelName := getLevelName(level)
-
-	// Format the timestamp
-	timestamp := time.Now().Format(TimeFormat)
-
-	// Print the log message with caller information
-	fmt.Fprintf(os.Stderr, "%s %s %s > %s\n", timestamp, levelName, callerInfo, message)
+	return Default.logger.GetLevel() <= zerolog.DebugLevel
 }
 
-// getLevelName returns the string representation of a log level
-func getLevelName(level LogLevel) string {
-	switch level {
-	case DEBUG:
-		return "DBG"
-	case INFO:
-		return "INF"
-	case WARN:
-		return "WRN"
-	case ERROR:
-		return "ERR"
-	case FATAL:
-		return "FTL"
-	default:
-		return "???"
+// ForCrawler creates a logger for a specific crawler
+func ForCrawler(crawlerName string) *Logger {
+	if Default == nil {
+		Init()
 	}
+	return Default.WithField("crawler", crawlerName)
 }
 
-// getLevelString returns the full string representation of a log level
-func getLevelString(level LogLevel) string {
-	switch level {
-	case DEBUG:
-		return "DEBUG"
-	case INFO:
-		return "INFO"
-	case WARN:
-		return "WARN"
-	case ERROR:
-		return "ERROR"
-	case FATAL:
-		return "FATAL"
-	default:
-		return "UNKNOWN"
+// ForWorker creates a logger for the worker
+func ForWorker() *Logger {
+	if Default == nil {
+		Init()
 	}
+	return Default.WithField("component", "worker")
 }
 
-// LoggerInterface defines the interface for logger implementations
-type LoggerInterface interface {
-	LogError(crawlerName string, err error)
-	LogInfo(format string, args ...interface{})
-	Debug(format string, args ...interface{})
+// ForPublisher creates a logger for the publisher
+func ForPublisher() *Logger {
+	if Default == nil {
+		Init()
+	}
+	return Default.WithField("component", "publisher")
 }
 
-// Logger provides logging functionality
-type Logger struct{}
-
-// NewLogger creates a new logger instance
-func NewLogger() *Logger {
-	return &Logger{}
+// ForCache creates a logger for the cache
+func ForCache() *Logger {
+	if Default == nil {
+		Init()
+	}
+	return Default.WithField("component", "cache")
 }
 
-// LogError logs an error
-func (l *Logger) LogError(crawlerName string, err error) {
-	log.Error().
-		Str("crawler", crawlerName).
+// LogError is a convenience method for logging errors with context
+func LogError(component string, err error, format string, v ...interface{}) {
+	if Default == nil {
+		Init()
+	}
+	msg := fmt.Sprintf(format, v...)
+	Default.Error().
+		Str("component", component).
 		Err(err).
-		Msg("Crawler error")
+		Msg(msg)
 }
 
-// LogInfo logs an informational message
-func (l *Logger) LogInfo(format string, args ...interface{}) {
-	log.Info().Msgf(format, args...)
-}
-
-// Debug logs a debug message
-func (l *Logger) Debug(format string, args ...interface{}) {
-	log.Debug().Msgf(format, args...)
+// LogInfo is a convenience method for logging info with context
+func LogInfo(component string, format string, v ...interface{}) {
+	if Default == nil {
+		Init()
+	}
+	msg := fmt.Sprintf(format, v...)
+	Default.Info().
+		Str("component", component).
+		Msg(msg)
 }

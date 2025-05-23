@@ -1,46 +1,75 @@
+version: '3.8'
+
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: always
+    image: hotdealworker:latest
+    container_name: hotdealworker
+    restart: unless-stopped
     depends_on:
-      - redis
-      - memcached
-      - chromedb
+      redis:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      chromedb:
+        condition: service_healthy
     environment:
-      - HOTDEAL_ENVIRONMENT=production
+      - HOTDEAL_ENVIRONMENT=${HOTDEAL_ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - REDIS_ADDR=redis:6379
-      - REDIS_DB=0
-      - REDIS_STREAM=streamHotdeals
-      - REDIS_STREAM_COUNT=1
-      - REDIS_STREAM_MAX_LENGTH=500
+      - REDIS_DB=${REDIS_DB:-0}
+      - REDIS_STREAM=${REDIS_STREAM:-streamHotdeals}
+      - REDIS_STREAM_COUNT=${REDIS_STREAM_COUNT:-1}
+      - REDIS_STREAM_MAX_LENGTH=${REDIS_STREAM_MAX_LENGTH:-500}
       - MEMCACHE_ADDR=memcached:11211
-      - CRAWL_INTERVAL_SECONDS=60
-      - USE_CHROME_DB=true
+      - CRAWL_INTERVAL_SECONDS=${CRAWL_INTERVAL_SECONDS:-60}
+      - USE_CHROME_DB=${USE_CHROME_DB:-true}
       - CHROME_DB_ADDR=http://chromedb:3000
-    volumes:
-      - ./error:/app/error
+    env_file:
+      - .env
+    networks:
+      - hotdeal-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
-    image: redis:alpine
-    restart: always
+    image: redis:7-alpine
+    container_name: hotdeal-redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - hotdeal-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   memcached:
-    image: memcached:alpine
-    restart: always
+    image: memcached:1.6-alpine
+    container_name: hotdeal-memcached
+    restart: unless-stopped
     ports:
-      - "11211:11211"
+      - "${MEMCACHE_PORT:-11211}:11211"
+    command: memcached -m 128
+    networks:
+      - hotdeal-network
 
   chromedb:
     image: browserless/chrome:1.60.0-chrome-stable
-    restart: always
+    container_name: hotdeal-chromedb
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${CHROME_DB_PORT:-3000}:3000"
     environment:
       - CONNECTION_TIMEOUT=120000
       - MAX_CONCURRENT_SESSIONS=3
@@ -55,12 +84,14 @@ services:
       - WORKSPACE_EXPIRE_DAYS=1
       - DEFAULT_USER_DATA_DIR=/tmp/chromedb-cache
       - DEFAULT_LAUNCH_ARGS=--disable-gpu,--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-accelerated-2d-canvas,--no-first-run,--no-zygote,--single-process,--disable-features=site-per-process
-      - TOKEN=  # 필요시 설정
+      - TOKEN=${CHROME_DB_TOKEN:-}
     volumes:
       - chrome-data:/tmp
+    networks:
+      - hotdeal-network
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
-      interval: 1m
+      interval: 30s
       timeout: 10s
       retries: 3
     deploy:
@@ -71,6 +102,26 @@ services:
         reservations:
           memory: 1G
 
+  # Optional: Redis Commander for monitoring
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: hotdeal-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    networks:
+      - hotdeal-network
+    profiles:
+      - monitoring
+
+networks:
+  hotdeal-network:
+    driver: bridge
+
 volumes:
   redis-data:
+    driver: local
   chrome-data:
+    driver: local

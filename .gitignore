@@ -1,27 +1,44 @@
-# editor temporary files
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# Build output
+hotdealworker
+dist/
+build/
+
+# Editor temporary files
 *.sublime-*
 .DS_Store
 *.swp
+*~
 #*.*#
 tags
-error
 
-# direnv config
-.env*
-
-# test binaries
-*.test
-
-# coverage and profilte outputs
-*.out
-
-### VisualStudioCode ###
+# IDE specific files
+.idea/
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+*.iml
 
 # Local History for Visual Studio Code
 .history/
@@ -29,7 +46,27 @@ error
 # Built Visual Studio Code Extensions
 *.vsix
 
-### VisualStudioCode Patch ###
-# Ignore all local history of files
-.history
-.ionide
+# Environment variables
+.env*
+!.env.example
+
+# Log files
+*.log
+error
+error.old
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.html
+coverage.out
+*.cover
+
+# Temporary files
+tmp/
+temp/
+
+# Local development
+local/

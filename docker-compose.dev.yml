@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: hotdeal-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - hotdeal-dev-network
+
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: hotdeal-memcached-dev
+    ports:
+      - "11211:11211"
+    command: memcached -m 64 -vv
+    networks:
+      - hotdeal-dev-network
+
+  chromedb:
+    image: browserless/chrome:1.60.0-chrome-stable
+    container_name: hotdeal-chromedb-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - CONNECTION_TIMEOUT=60000
+      - MAX_CONCURRENT_SESSIONS=1
+      - DEBUG=browserless*
+      - DEFAULT_BLOCK_ADS=true
+      - ENABLE_CORS=true
+    networks:
+      - hotdeal-dev-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: hotdeal-redis-commander-dev
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - hotdeal-dev-network
+
+networks:
+  hotdeal-dev-network:
+    driver: bridge
+
+volumes:
+  redis-dev-data:
+    driver: local
