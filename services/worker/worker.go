@@ -226,38 +226,7 @@ func (w *Worker) crawlAndPublish(c crawler.Crawler) crawlerResult {
 		log.Debug().Msg("No deals found")
 	}
 
-	// Log deal details if debug enabled
-	if logger.IsDebugEnabled() && len(deals) > 0 {
-		w.logDeals(deals, log)
-	}
-
 	result.Success = true
 	result.DealCount = publishedCount
 	return result
-}
-
-// logDeals logs deal details for debugging
-func (w *Worker) logDeals(deals []crawler.HotDeal, log *logger.Logger) {
-	for i, deal := range deals {
-		// Create a copy without thumbnail for logging
-		loggableDeal := map[string]interface{}{
-			"id":             deal.Id,
-			"title":          deal.Title,
-			"link":           deal.Link,
-			"price":          deal.Price,
-			"thumbnail_link": deal.ThumbnailLink,
-			"posted_at":      deal.PostedAt,
-			"category":       deal.Category,
-			"provider":       deal.Provider,
-		}
-
-		if deal.Thumbnail != "" {
-			loggableDeal["thumbnail"] = "OK"
-		}
-
-		log.Debug().
-			Int("index", i+1).
-			Interface("deal", loggableDeal).
-			Msg("Deal details")
-	}
 }

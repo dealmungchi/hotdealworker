@@ -70,7 +70,7 @@ func NewZod(cfg config.Config, cacheSvc cache.CacheService) *UnifiedCrawler {
 		BlockTime:    500,
 		BaseURL:      cfg.ZodURL,
 		Provider:     "Zod",
-		UseChrome:    false,
+		UseChrome:    true,
 		ChromeDBAddr: cfg.ChromeDBAddr,
 		Selectors: Selectors{
 			DealList:      "ul.app-board-template-list.zod-board-list--deal li",

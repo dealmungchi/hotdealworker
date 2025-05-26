@@ -62,11 +62,37 @@ func (c *UnifiedCrawler) FetchDeals() ([]HotDeal, error) {
 		return nil, err
 	}
 
+	// Debug: Log the selector being used
+	logger.Debug("[%s] Looking for deals with selector: %s", c.Provider, c.Selectors.DealList)
+
 	// Find all deal items
 	dealSelections := doc.Find(c.Selectors.DealList)
+	logger.Debug("[%s] Found %d potential deal elements", c.Provider, dealSelections.Length())
+
+	// Debug: If no deals found, log some HTML structure
+	if dealSelections.Length() == 0 {
+		// Log the page title to see if we got the right page
+		pageTitle := doc.Find("title").Text()
+		logger.Debug("[%s] Page title: %s", c.Provider, strings.TrimSpace(pageTitle))
+		
+		// Log some body content to understand the structure
+		bodyHTML, _ := doc.Find("body").Html()
+		if len(bodyHTML) > 500 {
+			bodyHTML = bodyHTML[:500] + "..."
+		}
+		logger.Debug("[%s] Body HTML sample: %s", c.Provider, bodyHTML)
+		
+		// Try to find any ul or li elements
+		ulElements := doc.Find("ul")
+		logger.Debug("[%s] Found %d ul elements on page", c.Provider, ulElements.Length())
+		
+		liElements := doc.Find("li")
+		logger.Debug("[%s] Found %d li elements on page", c.Provider, liElements.Length())
+	}
 
 	// Process deals
 	deals := c.processDeals(dealSelections, c.processDeal)
+	logger.Debug("[%s] Successfully processed %d deals", c.Provider, len(deals))
 
 	return deals, nil
 }
