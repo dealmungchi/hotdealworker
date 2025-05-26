@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -186,73 +187,162 @@ func (c *UnifiedCrawler) checkFlareSolverr() error {
 func (c *UnifiedCrawler) fetchWithFlareSolverr() (io.Reader, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
 
-	payload := map[string]interface{}{
-		"cmd":        "request.get",
-		"url":        c.URL,
-		"maxTimeout": 60000,
+	// Try different FlareSolverr strategies with proxy rotation
+	strategies := []map[string]interface{}{
+		// Strategy 1: Basic request
+		{
+			"cmd":        "request.get",
+			"url":        c.URL,
+			"maxTimeout": 60000,
+		},
+		// Strategy 2: With session (helps with consistency)
+		{
+			"cmd":        "request.get",
+			"url":        c.URL,
+			"maxTimeout": 60000,
+			"session":    "zod_session",
+		},
+		// Strategy 3: With US proxy
+		{
+			"cmd":        "request.get",
+			"url":        c.URL,
+			"maxTimeout": 90000,
+			"session":    "zod_us_session",
+			"proxy": map[string]string{
+				"url": "http://username:password@us-proxy.provider.com:8080",
+			},
+		},
+		// Strategy 4: With EU proxy
+		{
+			"cmd":        "request.get",
+			"url":        c.URL,
+			"maxTimeout": 90000,
+			"session":    "zod_eu_session",
+			"proxy": map[string]string{
+				"url": "http://username:password@eu-proxy.provider.com:8080",
+			},
+		},
+		// Strategy 5: Residential proxy
+		{
+			"cmd":        "request.get",
+			"url":        c.URL,
+			"maxTimeout": 120000,
+			"session":    "zod_residential_session",
+			"proxy": map[string]string{
+				"url": "http://username:password@residential.provider.com:8080",
+			},
+		},
 	}
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal FlareSolverr payload: %v", err)
-	}
+	// Load proxy configurations from environment or config
+	proxies := c.loadProxyConfig()
 
-	req, err := http.NewRequest("POST", "http://localhost:8191/v1", bytes.NewBuffer(data))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create FlareSolverr request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	logger.Debug("[%s] Making FlareSolverr request to %s", c.Provider, c.URL)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("FlareSolverr request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("FlareSolverr HTTP %d: %s", resp.StatusCode, string(body))
-	}
-
-	responseBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read FlareSolverr response: %v", err)
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal(responseBytes, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse FlareSolverr response: %v", err)
-	}
-
-	// Check if request was successful
-	if status, ok := result["status"].(string); !ok || status != "ok" {
-		message := "unknown error"
-		if msg, ok := result["message"].(string); ok {
-			message = msg
+	for i, payload := range strategies {
+		// Apply proxy configuration if available
+		if proxyData, hasProxy := payload["proxy"].(map[string]string); hasProxy {
+			proxyKey := fmt.Sprintf("proxy_%d", i)
+			if proxyURL, exists := proxies[proxyKey]; exists {
+				proxyData["url"] = proxyURL
+			} else {
+				// Skip if no proxy configured for this strategy
+				continue
+			}
 		}
-		return nil, fmt.Errorf("FlareSolverr error: %s", message)
+
+		logger.Debug("[%s] Trying FlareSolverr strategy %d/%d", c.Provider, i+1, len(strategies))
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			logger.Debug("[%s] Failed to marshal strategy %d payload: %v", c.Provider, i+1, err)
+			continue
+		}
+
+		req, err := http.NewRequest("POST", "http://localhost:8191/v1", bytes.NewBuffer(data))
+		if err != nil {
+			logger.Debug("[%s] Failed to create request for strategy %d: %v", c.Provider, i+1, err)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.Debug("[%s] Strategy %d request failed: %v", c.Provider, i+1, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			logger.Debug("[%s] FlareSolverr strategy %d failed: HTTP %d: %s", c.Provider, i+1, resp.StatusCode, string(body))
+			continue
+		}
+
+		responseBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Debug("[%s] Failed to read response for strategy %d: %v", c.Provider, i+1, err)
+			continue
+		}
+
+		var result map[string]interface{}
+		if err := json.Unmarshal(responseBytes, &result); err != nil {
+			logger.Debug("[%s] Failed to parse response for strategy %d: %v", c.Provider, i+1, err)
+			continue
+		}
+
+		// Check if request was successful
+		if status, ok := result["status"].(string); !ok || status != "ok" {
+			if msg, ok := result["message"].(string); ok {
+				logger.Debug("[%s] FlareSolverr strategy %d error: %s", c.Provider, i+1, msg)
+			}
+			continue
+		}
+
+		// Extract the HTML content
+		solution, ok := result["solution"].(map[string]interface{})
+		if !ok {
+			logger.Debug("[%s] Strategy %d missing solution in response", c.Provider, i+1)
+			continue
+		}
+
+		htmlContent, ok := solution["response"].(string)
+		if !ok {
+			logger.Debug("[%s] Strategy %d missing HTML content in solution", c.Provider, i+1)
+			continue
+		}
+
+		logger.Debug("[%s] FlareSolverr strategy %d returned %d bytes of HTML", c.Provider, i+1, len(htmlContent))
+
+		// Quick check to see if we still got Cloudflare challenge
+		if strings.Contains(strings.ToLower(htmlContent), "just a moment") {
+			logger.Debug("[%s] FlareSolverr strategy %d still got Cloudflare challenge", c.Provider, i+1)
+			continue
+		}
+
+		logger.Info("[%s] FlareSolverr strategy %d succeeded with proxy", c.Provider, i+1)
+		return strings.NewReader(htmlContent), nil
 	}
 
-	// Extract the HTML content
-	solution, ok := result["solution"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("FlareSolverr response missing solution")
+	return nil, fmt.Errorf("all FlareSolverr strategies failed or IP is banned")
+}
+
+// loadProxyConfig loads proxy configurations from environment variables
+func (c *UnifiedCrawler) loadProxyConfig() map[string]string {
+	proxies := make(map[string]string)
+
+	// Load from environment variables
+	if proxy := os.Getenv("PROXY_US"); proxy != "" {
+		proxies["proxy_2"] = proxy
+	}
+	if proxy := os.Getenv("PROXY_EU"); proxy != "" {
+		proxies["proxy_3"] = proxy
+	}
+	if proxy := os.Getenv("PROXY_RESIDENTIAL"); proxy != "" {
+		proxies["proxy_4"] = proxy
 	}
 
-	htmlContent, ok := solution["response"].(string)
-	if !ok {
-		return nil, fmt.Errorf("FlareSolverr response missing HTML content")
-	}
-
-	logger.Debug("[%s] FlareSolverr returned %d bytes of HTML", c.Provider, len(htmlContent))
-
-	// Quick check to see if we still got Cloudflare challenge
-	if strings.Contains(strings.ToLower(htmlContent), "just a moment") {
-		return nil, fmt.Errorf("FlareSolverr still got Cloudflare challenge page")
-	}
-
-	return strings.NewReader(htmlContent), nil
+	// Add more proxy sources as needed
+	logger.Debug("[%s] Loaded %d proxy configurations", c.Provider, len(proxies))
+	return proxies
 }
 
 // ============================================================================
