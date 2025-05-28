@@ -18,6 +18,7 @@ import (
 )
 
 func main() {
+	// Load environment variables
 	godotenv.Load()
 
 	// Initialize logger first
@@ -29,6 +30,12 @@ func main() {
 	if err := cfg.Validate(); err != nil {
 		log.Fatal().Err(err).Msg("Invalid configuration")
 	}
+
+	if err := crawler.InitializeProxyManager(); err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize proxy manager")
+	}
+	stats := crawler.GetProxyStats()
+	log.Info().Interface("proxy_stats", stats).Msg("Proxy stats")
 
 	log.Info().
 		Str("environment", cfg.Environment).
