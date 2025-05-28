@@ -18,8 +18,6 @@ import (
 	"sjsage522/hotdealworker/helpers"
 	"sjsage522/hotdealworker/logger"
 	"sjsage522/hotdealworker/services/cache"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 // ProxyInfo holds proxy information with latency
@@ -49,85 +47,85 @@ func NewProxyManager() *ProxyManager {
 	}
 }
 
-// fetchProxiesFromSpysOne fetches SOCKS5 proxies from spys.one
+// fetchProxiesFromSpysOne fetches SOCKS5 proxies from spys.me
 func (pm *ProxyManager) fetchProxiesFromSpysOne() ([]ProxyInfo, error) {
-	logger.Debug("Fetching SOCKS5 proxies from spys.one")
+	logger.Debug("Fetching SOCKS5 proxies from spys.me")
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	// Create request with proper headers
-	req, err := http.NewRequest("GET", "https://spys.one/en/socks-proxy-list/", nil)
+	req, err := http.NewRequest("GET", "https://spys.me/socks.txt", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept", "text/plain,*/*")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Upgrade-Insecure-Requests", "1")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch spys.one: %v", err)
+		return nil, fmt.Errorf("failed to fetch spys.me: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("spys.one returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("spys.me returned status %d", resp.StatusCode)
 	}
 
-	// Parse HTML
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse HTML: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
 	var proxies []ProxyInfo
 
-	// Parse proxy table - spys.one specific parsing
-	doc.Find("tr").Each(func(i int, s *goquery.Selection) {
-		if i == 0 { // Skip header
-			return
+	// Parse text format - each line contains IP:PORT CountryCode-Anonymity(Noa/Anm/Hia)-SSL_support(S)-Google_passed(+)
+	lines := strings.Split(string(body), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.Contains(line, "Proxy list") || strings.Contains(line, "Http proxy") || strings.Contains(line, "Support by") || strings.Contains(line, "BTC") || strings.Contains(line, "IP address:Port") || strings.Contains(line, "Free SOCKS5") {
+			continue // Skip empty lines, comments, and header lines
 		}
 
-		cells := s.Find("td")
-		if cells.Length() < 6 {
-			return
+		// Split line by space to separate IP:PORT from metadata
+		fields := strings.Fields(line)
+		if len(fields) < 1 {
+			continue
 		}
 
-		// Extract IP:Port from first cell
-		ipPortText := strings.TrimSpace(cells.Eq(0).Text())
-		if ipPortText == "" {
-			return
-		}
-
-		// Split IP and Port
-		parts := strings.Split(ipPortText, ":")
+		// Extract IP:PORT from first field
+		ipPortField := fields[0]
+		parts := strings.Split(ipPortField, ":")
 		if len(parts) != 2 {
-			return
+			continue // Skip invalid format
 		}
 
 		host := strings.TrimSpace(parts[0])
 		portStr := strings.TrimSpace(parts[1])
+
+		// Validate IP format
+		if net.ParseIP(host) == nil {
+			continue // Skip invalid IP
+		}
+
 		port, err := strconv.Atoi(portStr)
-		if err != nil {
-			return
+		if err != nil || port <= 0 || port > 65535 {
+			continue // Skip invalid port
 		}
 
-		// Check if it's SOCKS5 (from type column)
-		typeText := strings.ToLower(strings.TrimSpace(cells.Eq(1).Text()))
-		if !strings.Contains(typeText, "socks5") && !strings.Contains(typeText, "s5") {
-			return
-		}
-
-		// Extract country (usually in 3rd or 4th column)
-		country := strings.TrimSpace(cells.Eq(2).Text())
-		if country == "" {
-			country = "Unknown"
+		// Extract country code from second field if available
+		country := "Unknown"
+		if len(fields) >= 2 {
+			countryField := fields[1]
+			// Format is usually like "US-H", "RU-H!", etc.
+			if parts := strings.Split(countryField, "-"); len(parts) >= 1 {
+				country = parts[0]
+			}
 		}
 
 		proxy := ProxyInfo{
@@ -139,16 +137,16 @@ func (pm *ProxyManager) fetchProxiesFromSpysOne() ([]ProxyInfo, error) {
 		}
 
 		proxies = append(proxies, proxy)
-	})
+	}
 
-	logger.Info("Found %d SOCKS5 proxies from spys.one", len(proxies))
+	logger.Info("Found %d SOCKS5 proxies from spys.me", len(proxies))
 	return proxies, nil
 }
 
 // testProxyLatency tests the latency of a single proxy
 func (pm *ProxyManager) testProxyLatency(proxy *ProxyInfo) {
-	// Create SOCKS5 dialer with timeout
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", proxy.Host, proxy.Port), 10*time.Second)
+	// Create SOCKS5 dialer with shorter timeout for faster testing
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", proxy.Host, proxy.Port), 5*time.Second)
 	if err != nil {
 		proxy.Working = false
 		proxy.Latency = time.Hour // Very high latency for failed connections
@@ -156,7 +154,7 @@ func (pm *ProxyManager) testProxyLatency(proxy *ProxyInfo) {
 	}
 	defer conn.Close()
 
-	// Additional HTTP test through proxy
+	// Additional HTTP test through proxy with shorter timeout
 	proxyURL := fmt.Sprintf("socks5://%s:%d", proxy.Host, proxy.Port)
 	transport := &http.Transport{
 		Proxy: func(*http.Request) (*url.URL, error) {
@@ -166,11 +164,11 @@ func (pm *ProxyManager) testProxyLatency(proxy *ProxyInfo) {
 
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   10 * time.Second,
+		Timeout:   5 * time.Second,
 	}
 
 	// Test with a simple HTTP request
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/ip", nil)
@@ -193,7 +191,7 @@ func (pm *ProxyManager) testProxyLatency(proxy *ProxyInfo) {
 		proxy.Working = true
 		proxy.Latency = time.Since(testStart)
 		proxy.LastTest = time.Now()
-		logger.Debug("Proxy %s:%d working, latency: %v", proxy.Host, proxy.Port, proxy.Latency)
+		logger.Debug("Proxy %s:%d (%s) working, latency: %v", proxy.Host, proxy.Port, proxy.Country, proxy.Latency)
 	} else {
 		proxy.Working = false
 		proxy.Latency = time.Hour
@@ -222,40 +220,68 @@ func (pm *ProxyManager) UpdateProxies() error {
 		return fmt.Errorf("no proxies found")
 	}
 
-	// Test proxies in parallel
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 10) // Limit concurrent tests
-
-	for i := range newProxies {
-		wg.Add(1)
-		go func(proxy *ProxyInfo) {
-			defer wg.Done()
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-
-			pm.testProxyLatency(proxy)
-		}(&newProxies[i])
-	}
-
-	wg.Wait()
-
-	// Filter working proxies and sort by latency
+	// Test proxies in batches to find top 5 quickly
 	var workingProxies []ProxyInfo
-	for _, proxy := range newProxies {
-		if proxy.Working {
-			workingProxies = append(workingProxies, proxy)
+	var mu sync.Mutex
+	batchSize := 50  // Test 50 proxies at a time
+	targetCount := 5 // Stop when we have 5 good proxies
+
+	logger.Info("Testing proxies in batches of %d to find top %d...", batchSize, targetCount)
+
+	for i := 0; i < len(newProxies) && len(workingProxies) < targetCount*2; i += batchSize {
+		end := i + batchSize
+		if end > len(newProxies) {
+			end = len(newProxies)
+		}
+
+		batch := newProxies[i:end]
+		logger.Debug("Testing batch %d-%d (%d proxies)...", i+1, end, len(batch))
+
+		var wg sync.WaitGroup
+		semaphore := make(chan struct{}, 20)
+
+		for j := range batch {
+			wg.Add(1)
+			go func(proxy *ProxyInfo) {
+				defer wg.Done()
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				pm.testProxyLatency(proxy)
+				if proxy.Working {
+					mu.Lock()
+					workingProxies = append(workingProxies, *proxy)
+					mu.Unlock()
+				}
+			}(&batch[j])
+		}
+
+		wg.Wait()
+
+		// Sort current working proxies by latency
+		sort.Slice(workingProxies, func(i, j int) bool {
+			return workingProxies[i].Latency < workingProxies[j].Latency
+		})
+
+		logger.Info("Batch complete. Found %d working proxies so far", len(workingProxies))
+
+		// If we have enough good proxies, we can stop early
+		if len(workingProxies) >= targetCount*2 {
+			logger.Info("Found enough proxies (%d), stopping early", len(workingProxies))
+			break
 		}
 	}
 
-	// Sort by latency (fastest first)
-	sort.Slice(workingProxies, func(i, j int) bool {
-		return workingProxies[i].Latency < workingProxies[j].Latency
-	})
+	// Keep only top 5 fastest proxies
+	if len(workingProxies) > targetCount {
+		workingProxies = workingProxies[:targetCount]
+		logger.Info("Selected top %d fastest proxies", targetCount)
+	}
 
 	pm.proxies = workingProxies
 	pm.lastUpdate = time.Now()
 
-	logger.Info("Updated proxy list: %d working proxies (fastest: %v)",
+	logger.Info("Updated proxy list: %d proxies selected (fastest: %v)",
 		len(workingProxies),
 		func() string {
 			if len(workingProxies) > 0 {
@@ -263,6 +289,11 @@ func (pm *ProxyManager) UpdateProxies() error {
 			}
 			return "none"
 		}())
+
+	// Log top proxies for debugging
+	for i, proxy := range workingProxies {
+		logger.Info("Top proxy #%d: %s:%d (%s) - %v", i+1, proxy.Host, proxy.Port, proxy.Country, proxy.Latency)
+	}
 
 	return nil
 }
