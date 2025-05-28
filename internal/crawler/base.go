@@ -190,7 +190,7 @@ func (c *UnifiedCrawler) fetchWithFlareSolverr() (io.Reader, error) {
 	payload := map[string]interface{}{
 		"cmd":        "request.get",
 		"url":        c.URL,
-		"maxTimeout": 10000,
+		"maxTimeout": 20000,
 	}
 
 	reader, err := c.executeFlareSolverrRequest(client, payload)
