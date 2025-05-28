@@ -186,12 +186,31 @@ func (c *UnifiedCrawler) checkFlareSolverr() error {
 func (c *UnifiedCrawler) fetchWithFlareSolverr() (io.Reader, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
 
+	// First try without proxy
 	payload := map[string]interface{}{
 		"cmd":        "request.get",
 		"url":        c.URL,
-		"maxTimeout": 60000,
+		"maxTimeout": 10000,
 	}
 
+	reader, err := c.executeFlareSolverrRequest(client, payload)
+	if err == nil {
+		return reader, nil
+	}
+
+	logger.Warn("[%s] FlareSolverr failed without proxy: %v, retrying with proxy", c.Provider, err)
+
+	// Retry with proxy
+	payload["proxy"] = map[string]interface{}{
+		// TODO: proxy setup
+		"url": "socks5://3.15.212.96:1080",
+	}
+
+	return c.executeFlareSolverrRequest(client, payload)
+}
+
+// executeFlareSolverrRequest executes a single FlareSolverr request
+func (c *UnifiedCrawler) executeFlareSolverrRequest(client *http.Client, payload map[string]interface{}) (io.Reader, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
