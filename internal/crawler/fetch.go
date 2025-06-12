@@ -67,27 +67,50 @@ func (c *BaseCrawler) fetchWithCache() (io.Reader, error) {
 	return utf8Body, nil
 }
 
-// fetchWithChromeDB fetches a URL using FlareSolverr first, falling back to ChromeDB if needed
+// fetchWithChromeDB fetches a URL using ChromeDB first, falling back to FlareSolverr if needed
 func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
-	// Step 1: Try FlareSolverr first for Cloudflare-protected sites
-	if err := c.checkFlareSolverr(); err == nil {
-		logger.Debug("[%s] FlareSolverr available, attempting Cloudflare bypass", c.Provider)
-		reader, err := c.fetchWithFlareSolverr()
+	// Step 1: Try ChromeDB first
+	if err := c.checkChromeDBHealth(); err == nil {
+		logger.Debug("[%s] ChromeDB available, attempting direct fetch", c.Provider)
+		reader, err := c.fetchWithChromeDBDirect()
 		if err == nil && reader != nil {
-			logger.Info("[%s] FlareSolverr bypass successful", c.Provider)
+			logger.Info("[%s] ChromeDB fetch successful", c.Provider)
 			return reader, nil
 		}
-		logger.Warn("[%s] FlareSolverr failed: %v, falling back to ChromeDB", c.Provider, err)
+		logger.Warn("[%s] ChromeDB failed: %v, falling back to FlareSolverr", c.Provider, err)
 	} else {
-		logger.Debug("[%s] FlareSolverr not available: %v", c.Provider, err)
+		logger.Debug("[%s] ChromeDB not available: %v", c.Provider, err)
 	}
 
-	// Step 2: Fallback to ChromeDB
-	if err := c.checkChromeDBHealth(); err != nil {
-		logger.Error("[%s] ChromeDB health check failed: %v", c.Provider, err)
-		return nil, fmt.Errorf("both FlareSolverr and ChromeDB unavailable")
+	// Step 2: Fallback to FlareSolverr for Cloudflare-protected sites
+	if err := c.checkFlareSolverr(); err != nil {
+		logger.Error("[%s] FlareSolverr health check failed: %v", c.Provider, err)
+		return nil, fmt.Errorf("both ChromeDB and FlareSolverr unavailable")
 	}
 
+	// Try FlareSolverr as fallback
+	logger.Info("[%s] Attempting FlareSolverr as fallback", c.Provider)
+	reader, err := c.fetchWithFlareSolverr()
+	if err == nil && reader != nil {
+		logger.Info("[%s] FlareSolverr fallback successful", c.Provider)
+		return reader, nil
+	}
+
+	logger.Error("[%s] FlareSolverr fallback failed: %v", c.Provider, err)
+
+	// Set rate limit if all strategies failed
+	if c.CacheSvc != nil && c.CacheKey != "" {
+		blockTime := 60 * time.Second
+		if setErr := c.CacheSvc.Set(c.CacheKey, []byte("60"), blockTime); setErr != nil {
+			logger.Debug("[%s] Failed to set rate limit cache: %v", c.Provider, setErr)
+		}
+	}
+
+	return nil, fmt.Errorf("all fetch strategies failed for URL: %s", c.URL)
+}
+
+// fetchWithChromeDBDirect performs ChromeDB fetch with all strategies
+func (c *UnifiedCrawler) fetchWithChromeDBDirect() (io.Reader, error) {
 	httpClient := &http.Client{Timeout: 60 * time.Second}
 
 	// ChromeDB strategies (only the working ones)
@@ -150,15 +173,7 @@ func (c *UnifiedCrawler) fetchWithChromeDB() (io.Reader, error) {
 		}
 	}
 
-	// Set rate limit if all strategies failed
-	if c.CacheSvc != nil && c.CacheKey != "" {
-		blockTime := 60 * time.Second
-		if setErr := c.CacheSvc.Set(c.CacheKey, []byte("60"), blockTime); setErr != nil {
-			logger.Debug("[%s] Failed to set rate limit cache: %v", c.Provider, setErr)
-		}
-	}
-
-	return nil, fmt.Errorf("all fetch strategies failed for URL: %s", c.URL)
+	return nil, fmt.Errorf("all ChromeDB strategies failed for URL: %s", c.URL)
 }
 
 // ============================================================================
@@ -418,6 +433,12 @@ func (c *UnifiedCrawler) processRawResponse(data []byte) (io.Reader, error) {
 		strings.Contains(strings.ToLower(dataStr), "<!doctype") ||
 		strings.Contains(strings.ToLower(dataStr), "<body") {
 		logger.Debug("[%s] Response appears to be HTML: %d bytes", c.Provider, len(data))
+		
+		// Additional check for problematic pages when using ChromeDB
+		if c.isProblematicPageFromHTML(dataStr) {
+			return nil, fmt.Errorf("ChromeDB returned problematic page (security check, error, etc.)")
+		}
+		
 		return bytes.NewReader(data), nil
 	}
 
@@ -429,4 +450,74 @@ func (c *UnifiedCrawler) processRawResponse(data []byte) (io.Reader, error) {
 	logger.Debug("[%s] Response doesn't look like HTML. Preview: %s", c.Provider, preview)
 
 	return nil, fmt.Errorf("response doesn't appear to be valid HTML")
+}
+
+// isProblematicPageFromHTML checks if the HTML content indicates a problematic page
+func (c *UnifiedCrawler) isProblematicPageFromHTML(htmlContent string) bool {
+	htmlContent = strings.ToLower(htmlContent)
+
+	// Check for Cloudflare security pages
+	cloudflareIndicators := []string{
+		"just a moment",
+		"checking your browser", 
+		"please wait",
+		"verify you are human",
+		"cf-turnstile",
+		"cloudflare",
+		"ray id",
+		"ddos protection",
+	}
+
+	for _, indicator := range cloudflareIndicators {
+		if strings.Contains(htmlContent, indicator) {
+			logger.Debug("[%s] Detected Cloudflare security page (indicator: %s)", c.Provider, indicator)
+			return true
+		}
+	}
+
+	// Check for common error pages
+	errorIndicators := []string{
+		"access denied",
+		"forbidden", 
+		"not found",
+		"404 error",
+		"500 error",
+		"502 bad gateway",
+		"503 service unavailable",
+		"internal server error",
+		"maintenance mode",
+		"temporarily unavailable",
+	}
+
+	for _, indicator := range errorIndicators {
+		if strings.Contains(htmlContent, indicator) {
+			logger.Debug("[%s] Detected error page (indicator: %s)", c.Provider, indicator)
+			return true
+		}
+	}
+
+	// Check if page is too short/empty (less than 1000 characters might indicate an error)
+	if len(htmlContent) < 1000 {
+		logger.Debug("[%s] Page content too short (%d chars), might be an error page", c.Provider, len(htmlContent))
+		return true
+	}
+
+	// Check for bot detection pages
+	botDetectionIndicators := []string{
+		"are you a robot",
+		"captcha",
+		"recaptcha",
+		"bot detection", 
+		"human verification",
+		"prove you are human",
+	}
+
+	for _, indicator := range botDetectionIndicators {
+		if strings.Contains(htmlContent, indicator) {
+			logger.Debug("[%s] Detected bot detection page (indicator: %s)", c.Provider, indicator)
+			return true
+		}
+	}
+
+	return false
 }
