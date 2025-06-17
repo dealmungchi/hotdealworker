@@ -1,0 +1,225 @@
+package services
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strconv"
+	"sync"
+
+	"github.com/dealmungchi/dealcrawler/services/cache"
+	"github.com/dealmungchi/dealcrawler/services/proxy"
+	"github.com/dealmungchi/dealcrawler/services/publisher"
+	"github.com/rs/zerolog/log"
+)
+
+// ServiceContainer holds all initialized services
+type ServiceContainer struct {
+	Cache     cache.CacheService
+	Publisher publisher.Publisher
+	Proxy     proxy.ProxyManager
+
+	mu          sync.RWMutex
+	initialized bool
+}
+
+// Global service container instance
+var globalContainer = &ServiceContainer{}
+
+// Initialize initializes all services in the container
+func Initialize(ctx context.Context) error {
+	globalContainer.mu.Lock()
+	defer globalContainer.mu.Unlock()
+
+	if globalContainer.initialized {
+		log.Warn().Msg("Services already initialized")
+		return nil
+	}
+
+	log.Info().Msg("Initializing service container")
+
+	// Initialize cache service
+	if err := initializeCacheService(); err != nil {
+		return fmt.Errorf("failed to initialize cache service: %v", err)
+	}
+
+	// Initialize publisher service
+	if err := initializePublisherService(ctx); err != nil {
+		return fmt.Errorf("failed to initialize publisher service: %v", err)
+	}
+
+	// Initialize proxy manager
+	if err := initializeProxyManager(); err != nil {
+		return fmt.Errorf("failed to initialize proxy manager: %v", err)
+	}
+
+	globalContainer.initialized = true
+	log.Info().Msg("Service container initialized successfully")
+
+	return nil
+}
+
+// Cleanup cleans up all services in the container
+func Cleanup() {
+	globalContainer.mu.Lock()
+	defer globalContainer.mu.Unlock()
+
+	if !globalContainer.initialized {
+		return
+	}
+
+	log.Info().Msg("Cleaning up service container")
+
+	if globalContainer.Publisher != nil {
+		log.Debug().Msg("Closing publisher")
+		globalContainer.Publisher.Close()
+	}
+
+	if globalContainer.Cache != nil {
+		log.Debug().Msg("Closing cache service")
+		// Add cache cleanup if needed
+	}
+
+	globalContainer.initialized = false
+	log.Info().Msg("Service container cleanup completed")
+}
+
+// IsInitialized returns whether the service container is initialized
+func IsInitialized() bool {
+	globalContainer.mu.RLock()
+	defer globalContainer.mu.RUnlock()
+	return globalContainer.initialized
+}
+
+// GetCache returns the global cache service
+func GetCache() cache.CacheService {
+	globalContainer.mu.RLock()
+	defer globalContainer.mu.RUnlock()
+
+	if !globalContainer.initialized {
+		log.Fatal().Msg("Services not initialized - call services.Initialize() first")
+	}
+
+	return globalContainer.Cache
+}
+
+// GetPublisher returns the global publisher service
+func GetPublisher() publisher.Publisher {
+	globalContainer.mu.RLock()
+	defer globalContainer.mu.RUnlock()
+
+	if !globalContainer.initialized {
+		log.Fatal().Msg("Services not initialized - call services.Initialize() first")
+	}
+
+	return globalContainer.Publisher
+}
+
+// GetProxy returns the global proxy manager
+func GetProxy() proxy.ProxyManager {
+	globalContainer.mu.RLock()
+	defer globalContainer.mu.RUnlock()
+
+	if !globalContainer.initialized {
+		log.Fatal().Msg("Services not initialized - call services.Initialize() first")
+	}
+
+	return globalContainer.Proxy
+}
+
+// initializeCacheService initializes the cache service
+func initializeCacheService() error {
+	memcacheAddr := os.Getenv("MEMCACHE_ADDR")
+	if memcacheAddr == "" {
+		memcacheAddr = "localhost:11211" // Default memcache address
+		log.Info().Str("addr", memcacheAddr).Msg("MEMCACHE_ADDR not set, using default")
+	}
+
+	log.Info().Str("addr", memcacheAddr).Msg("Initializing cache service")
+
+	cacheService := cache.NewMemcacheService(memcacheAddr)
+	if cacheService == nil {
+		return fmt.Errorf("failed to create cache service with address: %s", memcacheAddr)
+	}
+
+	globalContainer.Cache = cacheService
+	log.Info().Str("addr", memcacheAddr).Msg("Cache service initialized successfully")
+
+	return nil
+}
+
+// initializePublisherService initializes the publisher service
+func initializePublisherService(ctx context.Context) error {
+	redisAddr := os.Getenv("REDIS_ADDR")
+	redisDB, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
+	redisStream := os.Getenv("REDIS_STREAM")
+	redisStreamCount, _ := strconv.Atoi(os.Getenv("REDIS_STREAM_COUNT"))
+	redisStreamMaxLength, _ := strconv.Atoi(os.Getenv("REDIS_STREAM_MAX_LENGTH"))
+
+	// Set defaults if not configured
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+		log.Info().Str("addr", redisAddr).Msg("REDIS_ADDR not set, using default")
+	}
+	if redisStream == "" {
+		redisStream = "streamHotdeals"
+		log.Info().Str("stream", redisStream).Msg("REDIS_STREAM not set, using default")
+	}
+	if redisStreamCount == 0 {
+		redisStreamCount = 1
+		log.Info().Int("count", redisStreamCount).Msg("REDIS_STREAM_COUNT not set, using default")
+	}
+	if redisStreamMaxLength == 0 {
+		redisStreamMaxLength = 500
+		log.Info().Int("max_length", redisStreamMaxLength).Msg("REDIS_STREAM_MAX_LENGTH not set, using default")
+	}
+
+	log.Info().
+		Str("addr", redisAddr).
+		Int("db", redisDB).
+		Str("stream", redisStream).
+		Int("stream_count", redisStreamCount).
+		Int("max_length", redisStreamMaxLength).
+		Msg("Initializing Redis publisher")
+
+	redisPublisher := publisher.NewRedisPublisher(
+		ctx,
+		redisAddr,
+		redisDB,
+		redisStream,
+		redisStreamCount,
+		redisStreamMaxLength,
+	)
+	if redisPublisher == nil {
+		return fmt.Errorf("failed to create redis publisher with address: %s", redisAddr)
+	}
+
+	globalContainer.Publisher = redisPublisher
+	log.Info().
+		Str("addr", redisAddr).
+		Int("db", redisDB).
+		Str("stream", redisStream).
+		Msg("Redis publisher initialized successfully")
+
+	return nil
+}
+
+// initializeProxyManager initializes the proxy manager
+// Proxy initialization is optional - if it fails, the app will continue without proxies
+func initializeProxyManager() error {
+	log.Info().Msg("Initializing proxy manager")
+
+	// Create a proxy manager instance first
+	proxyManager := proxy.NewProxyManager()
+	globalContainer.Proxy = proxyManager
+
+	// Try to initialize proxies, but don't fail if it doesn't work
+	if err := proxy.InitializeProxyManager(); err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize proxy list - continuing without proxies")
+		// Don't return error - allow app to continue without proxies
+	} else {
+		log.Info().Interface("proxy_stats", proxy.GetProxyStats()).Msg("Proxy manager initialized successfully")
+	}
+
+	return nil
+}
